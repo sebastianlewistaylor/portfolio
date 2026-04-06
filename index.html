@@ -16,6 +16,7 @@
       --accent: #c8c2f5;
       --nav-w: 220px;
       --pad: clamp(1.5rem, 3vw, 3rem);
+      --active-color: #c8c2f5;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -65,12 +66,13 @@
       top: 0;
       width: 80px;
       height: 80px;
-      background: #d8e8d0;
+      background: var(--active-color);
       mix-blend-mode: difference;
       border-radius: 50%;
       pointer-events: none;
       z-index: 9998;
       transform-origin: center center;
+      transition: background 0.6s ease;
     }
 
     body.cursor-hover .cursor {
@@ -203,7 +205,7 @@
     }
 
     .nav-links li a:hover,
-    .nav-links li a.active { color: var(--fg); }
+    .nav-links li a.active { color: var(--active-color); }
 
     .nav-num {
       font-size: 9px;
@@ -407,7 +409,15 @@
 
     .project-row:hover .p-arrow {
       transform: translate(4px, -4px);
-      color: var(--fg);
+      color: var(--active-color);
+    }
+
+    .project-row:hover .p-title {
+      color: var(--active-color);
+    }
+
+    .project-row:hover .p-num {
+      color: var(--active-color);
     }
 
     /* Project image preview */
@@ -565,7 +575,7 @@
     }
 
     .contact-row:hover .contact-row-bg { transform: scaleX(1); }
-    .contact-row:hover { color: var(--fg); }
+    .contact-row:hover { color: var(--active-color); }
 
     .contact-row span, .contact-arrow { position: relative; }
 
@@ -699,7 +709,7 @@
 
     <div class="project-list">
 
-      <a class="project-row fade-up" href="#" data-title="Justin Mead Maxon">
+      <a class="project-row fade-up" href="#" data-title="Justin Mead Maxon" data-color="#c9a96e">
         <div class="project-row-bg"></div>
         <div class="p-num">01</div>
         <div class="p-info">
@@ -715,7 +725,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Internet Journal">
+      <a class="project-row fade-up" href="#" data-title="Internet Journal" data-color="#7ab3d4">
         <div class="project-row-bg"></div>
         <div class="p-num">02</div>
         <div class="p-info">
@@ -731,7 +741,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Humboldt Film Festival">
+      <a class="project-row fade-up" href="#" data-title="Humboldt Film Festival" data-color="#c97a7a">
         <div class="project-row-bg"></div>
         <div class="p-num">03</div>
         <div class="p-info">
@@ -747,7 +757,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Fine Art Prints">
+      <a class="project-row fade-up" href="#" data-title="Fine Art Prints" data-color="#8ecfa0">
         <div class="project-row-bg"></div>
         <div class="p-num">04</div>
         <div class="p-info">
@@ -763,7 +773,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Ijal Morgan — Tired of Resting">
+      <a class="project-row fade-up" href="#" data-title="Ijal Morgan — Tired of Resting" data-color="#b08ec9">
         <div class="project-row-bg"></div>
         <div class="p-num">05</div>
         <div class="p-info">
@@ -779,7 +789,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Digital Laboratory Poster Campaign">
+      <a class="project-row fade-up" href="#" data-title="Digital Laboratory Poster Campaign" data-color="#c9956e">
         <div class="project-row-bg"></div>
         <div class="p-num">06</div>
         <div class="p-info">
@@ -795,7 +805,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="CTL — Cal Poly Humboldt">
+      <a class="project-row fade-up" href="#" data-title="CTL — Cal Poly Humboldt" data-color="#6ec9c9">
         <div class="project-row-bg"></div>
         <div class="p-num">07</div>
         <div class="p-info">
@@ -811,7 +821,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Digital Laboratory — Cal Poly">
+      <a class="project-row fade-up" href="#" data-title="Digital Laboratory — Cal Poly" data-color="#c9c06e">
         <div class="project-row-bg"></div>
         <div class="p-num">08</div>
         <div class="p-info">
@@ -1122,6 +1132,20 @@
     observer.observe(el);
   });
 
+  // ── Color system ──
+  const SECTION_COLORS = {
+    info:    '#c8c2f5',
+    work:    '#c9a96e',
+    archive: '#7ab3d4',
+    contact: '#8ecfa0',
+  };
+
+  let currentSectionColor = SECTION_COLORS.info;
+
+  function setActiveColor(color) {
+    document.documentElement.style.setProperty('--active-color', color);
+  }
+
   // ── Nav active state with GSAP ──
   const sections = document.querySelectorAll('[nav-section]');
 
@@ -1133,27 +1157,30 @@
 
     gsap.set(bg, { xPercent: -101 });
 
+    const activate = () => {
+      document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+      link.classList.add('active');
+      gsap.to(bg, { xPercent: 0, duration: 0.4, ease: 'power3.inOut' });
+      currentSectionColor = SECTION_COLORS[name] || SECTION_COLORS.info;
+      setActiveColor(currentSectionColor);
+    };
+
     ScrollTrigger.create({
       trigger: section,
       start: 'top center',
       end: 'bottom center',
-      onEnter: () => {
-        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-        link.classList.add('active');
-        gsap.to(bg, { xPercent: 0, duration: 0.4, ease: 'power3.inOut' });
-      },
-      onEnterBack: () => {
-        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-        link.classList.add('active');
-        gsap.to(bg, { xPercent: 0, duration: 0.4, ease: 'power3.inOut' });
-      },
-      onLeave: () => {
-        gsap.to(bg, { xPercent: 101, duration: 0.3, ease: 'power3.inOut' });
-      },
-      onLeaveBack: () => {
-        gsap.to(bg, { xPercent: -101, duration: 0.3, ease: 'power3.inOut' });
-      }
+      onEnter:     activate,
+      onEnterBack: activate,
+      onLeave:     () => gsap.to(bg, { xPercent: 101,  duration: 0.3, ease: 'power3.inOut' }),
+      onLeaveBack: () => gsap.to(bg, { xPercent: -101, duration: 0.3, ease: 'power3.inOut' }),
     });
+  });
+
+  // ── Project row color on hover ──
+  projectRows.forEach(row => {
+    const color = row.dataset.color;
+    row.addEventListener('mouseenter', () => { if (color) setActiveColor(color); });
+    row.addEventListener('mouseleave', () => setActiveColor(currentSectionColor));
   });
 
   // ── Project row hover preview ──
