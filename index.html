@@ -93,7 +93,7 @@
       z-index: 99999;
       pointer-events: none;
       overflow: hidden;
-      background: #fff;
+      background: transparent;
       will-change: filter, opacity;
     }
 
@@ -1054,7 +1054,7 @@
       ease:     'expo.out',
     });
 
-    // Coloured circles follow — burst from centre toward corners
+    // Coloured circles follow once arrows have covered the screen
     circles.forEach((circle, i) => {
       tl.to(circle, {
         x:        circle._dest.x,
@@ -1062,7 +1062,7 @@
         scale:    1,
         duration: 0.9,
         ease:     'expo.inOut',
-      }, `-=0.4`);
+      }, `+=0.0`);
     });
 
     // Soften once expanded
