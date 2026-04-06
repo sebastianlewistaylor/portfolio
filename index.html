@@ -93,11 +93,11 @@
       z-index: 99999;
       display: flex;
       pointer-events: none;
+      will-change: filter, opacity;
     }
 
     .splash-strip {
       flex: 1;
-      background: var(--c);
       transform: scaleY(0);
       transform-origin: bottom center;
       will-change: transform;
@@ -658,13 +658,14 @@
 
 <!-- Splash -->
 <div id="splash">
-  <div class="splash-strip" style="--c:#6600FF"></div>
-  <div class="splash-strip" style="--c:#0044FF"></div>
-  <div class="splash-strip" style="--c:#00AAFF"></div>
-  <div class="splash-strip" style="--c:#00FFB3"></div>
-  <div class="splash-strip" style="--c:#CCFF00"></div>
-  <div class="splash-strip" style="--c:#FF9900"></div>
-  <div class="splash-strip" style="--c:#FF0099"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
+  <div class="splash-strip"></div>
 </div>
 
 <!-- Ticker -->
@@ -968,9 +969,33 @@
 <script>
   // ── Splash ──
   (function () {
-    const splash  = document.getElementById('splash');
-    const strips  = splash.querySelectorAll('.splash-strip');
+    const splash = document.getElementById('splash');
+    const strips = splash.querySelectorAll('.splash-strip');
     document.body.style.overflow = 'hidden';
+
+    // Curated Pantone-ish palette — electric, non-rainbow, complementary tensions
+    const PALETTE = [
+      '#FF006E', // hot pink
+      '#7B00FF', // electric violet
+      '#FF4D00', // burnt orange
+      '#00F0FF', // electric cyan
+      '#FFD600', // electric yellow
+      '#0040FF', // cobalt blue
+      '#FF00CC', // magenta
+      '#00FF87', // electric mint
+    ];
+
+    // Shuffle palette so it's different every load
+    const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
+
+    // Assign colors — each strip gets a gradient bleeding into the next
+    strips.forEach((strip, i) => {
+      const a = shuffled[i % shuffled.length];
+      const b = shuffled[(i + 1) % shuffled.length];
+      strip.style.background = `linear-gradient(to right, ${a}, ${b})`;
+    });
+
+    gsap.set(splash, { filter: 'blur(0px)', opacity: 1 });
 
     gsap.timeline({
       onComplete() {
@@ -978,24 +1003,26 @@
         document.body.style.overflow = '';
       }
     })
-    // Strips rise from bottom
+    // Strips rise from bottom — fast stagger
     .to(strips, {
       scaleY: 1,
-      duration: 0.55,
-      stagger: 0.07,
-      ease: 'power3.inOut',
+      duration: 0.6,
+      stagger: 0.06,
+      ease: 'expo.inOut',
       transformOrigin: 'bottom center',
     })
-    // Brief hold — all colours visible
-    .addLabel('hold', '+=0.1')
-    // Scatter: odd strips exit left, even exit right, with skew
-    .to(strips, {
-      xPercent: (i) => i % 2 === 0 ? -110 : 110,
-      skewX:    (i) => i % 2 === 0 ? -8 : 8,
+    // Blur strips so gradients mesh into each other
+    .to(splash, {
+      filter: 'blur(48px)',
       duration: 0.55,
-      stagger: { amount: 0.18, from: 'center' },
-      ease: 'power3.inOut',
-    }, 'hold');
+      ease: 'power2.inOut',
+    }, '+=0.05')
+    // Fade out the blurred gradient wash
+    .to(splash, {
+      opacity: 0,
+      duration: 0.65,
+      ease: 'power2.inOut',
+    }, '-=0.25');
   })();
 
   // ── Ticker ──
