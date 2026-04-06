@@ -97,8 +97,29 @@
       will-change: filter, opacity;
     }
 
-    /* 4 white quadrant triangles — apex at centre, shoot toward each corner */
-    .splash-arrow {
+    /* thin arrow lines shooting from centre */
+    .splash-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      height: 2px;
+      background: #fff;
+      transform-origin: 0% 50%;
+      will-change: transform;
+    }
+    .splash-line::after {
+      content: '';
+      position: absolute;
+      right: -9px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 10px solid #fff;
+    }
+
+    /* white quadrant fills — expand after lines */
+    .splash-fill {
       position: absolute;
       inset: 0;
       background: #fff;
@@ -106,10 +127,6 @@
       transform-origin: 50% 50%;
       will-change: transform;
     }
-    .splash-arrow:nth-child(1) { clip-path: polygon(50% 50%, 50% 0%,   0%   0%,  0%  50%); }
-    .splash-arrow:nth-child(2) { clip-path: polygon(50% 50%, 50% 0%,  100%  0%, 100% 50%); }
-    .splash-arrow:nth-child(3) { clip-path: polygon(50% 50%,  0% 50%,  0%  100%, 50% 100%); }
-    .splash-arrow:nth-child(4) { clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%); }
 
     .splash-circle {
       position: absolute;
@@ -673,10 +690,14 @@
 
 <!-- Splash -->
 <div id="splash">
-  <div class="splash-arrow"></div>
-  <div class="splash-arrow"></div>
-  <div class="splash-arrow"></div>
-  <div class="splash-arrow"></div>
+  <div class="splash-line"></div>
+  <div class="splash-line"></div>
+  <div class="splash-line"></div>
+  <div class="splash-line"></div>
+  <div class="splash-fill"></div>
+  <div class="splash-fill"></div>
+  <div class="splash-fill"></div>
+  <div class="splash-fill"></div>
   <div class="splash-circle"></div>
   <div class="splash-circle"></div>
   <div class="splash-circle"></div>
@@ -985,7 +1006,8 @@
   // ── Splash ──
   (function () {
     const splash  = document.getElementById('splash');
-    const arrows  = splash.querySelectorAll('.splash-arrow');
+    const lines   = splash.querySelectorAll('.splash-line');
+    const fills   = splash.querySelectorAll('.splash-fill');
     const circles = splash.querySelectorAll('.splash-circle');
     document.body.style.overflow = 'hidden';
 
@@ -1011,72 +1033,82 @@
       { x: window.innerWidth  * 0.75, y: window.innerHeight * 0.75 },
     ];
 
-    const cx = window.innerWidth  / 2;
-    const cy = window.innerHeight / 2;
+    const cx       = window.innerWidth  / 2;
+    const cy       = window.innerHeight / 2;
+    const diagonal = Math.sqrt(cx * cx + cy * cy);
 
+    // Corner angles from centre (radians → degrees)
+    const cornerAngles = [
+      Math.atan2(-cy, -cx) * 180 / Math.PI, // TL
+      Math.atan2(-cy,  cx) * 180 / Math.PI, // TR
+      Math.atan2( cy, -cx) * 180 / Math.PI, // BL
+      Math.atan2( cy,  cx) * 180 / Math.PI, // BR
+    ];
+
+    // Quadrant clip-paths for fills
+    const clipPaths = [
+      'polygon(50% 50%, 50% 0%, 0% 0%, 0% 50%)',
+      'polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)',
+      'polygon(50% 50%, 0% 50%, 0% 100%, 50% 100%)',
+      'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)',
+    ];
+
+    // Set up lines — thin, pointing toward each corner
+    lines.forEach((line, i) => {
+      line.style.width = diagonal + 'px';
+      gsap.set(line, { rotation: cornerAngles[i], scaleX: 0, transformOrigin: '0% 50%' });
+    });
+
+    // Set up fills
+    fills.forEach((fill, i) => {
+      fill.style.clipPath = clipPaths[i];
+      gsap.set(fill, { scale: 0 });
+    });
+
+    // Set up circles — all start at centre
     circles.forEach((circle, i) => {
-      const color  = randomPastelHex();
-      const drift  = 50;
-      const destX  = quadrants[i].x + (Math.random() - 0.5) * drift;
-      const destY  = quadrants[i].y + (Math.random() - 0.5) * drift;
-
+      const color = randomPastelHex();
+      const drift = 50;
+      const destX = quadrants[i].x + (Math.random() - 0.5) * drift;
+      const destY = quadrants[i].y + (Math.random() - 0.5) * drift;
       circle.style.background =
         `radial-gradient(circle at center, ${color} 0%, ${color}dd 35%, ${color}66 60%, transparent 80%)`;
-
-      // All circles start at the screen centre, collapsed
       gsap.set(circle, {
-        width:           size,
-        height:          size,
-        x:               cx - size / 2,
-        y:               cy - size / 2,
-        scale:           0,
-        transformOrigin: 'center center',
+        width: size, height: size,
+        x: cx - size / 2, y: cy - size / 2,
+        scale: 0,
       });
-
-      // Store destination for the timeline
       circle._dest = { x: destX - size / 2, y: destY - size / 2 };
     });
 
     gsap.set(splash, { filter: 'blur(0px)', opacity: 1 });
 
+    // ── 0.5s action window ──────────────────────────────────────
     const tl = gsap.timeline({
-      onComplete() {
-        splash.remove();
-        document.body.style.overflow = '';
-      }
+      onComplete() { splash.remove(); document.body.style.overflow = ''; }
     });
 
-    // White arrows shoot from centre toward each corner
-    tl.to(arrows, {
-      scale:    1,
-      duration: 0.55,
-      stagger:  0.04,
-      ease:     'expo.out',
+    // Phase 1 (0 – 0.16s): thin arrow lines shoot to corners
+    tl.to(lines, {
+      scaleX: 1, duration: 0.16, stagger: 0.015, ease: 'power3.out',
     });
 
-    // Coloured circles follow once arrows have covered the screen
-    circles.forEach((circle, i) => {
-      tl.to(circle, {
-        x:        circle._dest.x,
-        y:        circle._dest.y,
-        scale:    1,
-        duration: 0.9,
-        ease:     'expo.inOut',
-      }, `+=0.0`);
-    });
+    // Phase 2 (0.14 – 0.30s): white fills expand, lines fade
+    tl.to(fills, {
+      scale: 1, duration: 0.18, stagger: 0.015, ease: 'power3.inOut',
+    }, '-=0.04')
+    .to(lines, { opacity: 0, duration: 0.08 }, '<');
 
-    // Soften once expanded
-    tl.to(splash, {
-      filter:   'blur(30px)',
-      duration: 0.45,
-      ease:     'power2.inOut',
-    }, '-=0.3')
-    // Fade to reveal site
-    .to(splash, {
-      opacity:  0,
-      duration: 0.7,
-      ease:     'power2.inOut',
-    }, '+=0.05');
+    // Phase 3 (0.28 – 0.50s): colors burst from centre
+    tl.to(circles, {
+      x: (i) => circles[i]._dest.x,
+      y: (i) => circles[i]._dest.y,
+      scale: 1, duration: 0.22, stagger: 0.02, ease: 'power3.out',
+    }, '-=0.04');
+
+    // Grace: blur + fade (extends past 0.5s but feels natural)
+    tl.to(splash, { filter: 'blur(28px)', duration: 0.3, ease: 'power2.inOut' }, '-=0.06')
+      .to(splash, { opacity: 0, duration: 0.45, ease: 'power2.inOut' }, '+=0.02');
   })();
 
   // ── Ticker ──
