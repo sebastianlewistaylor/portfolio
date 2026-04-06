@@ -91,15 +91,14 @@
       position: fixed;
       inset: 0;
       z-index: 99999;
-      display: flex;
       pointer-events: none;
+      overflow: hidden;
       will-change: filter, opacity;
     }
 
-    .splash-strip {
-      flex: 1;
-      transform: scaleY(0);
-      transform-origin: bottom center;
+    .splash-circle {
+      position: absolute;
+      border-radius: 50%;
       will-change: transform;
     }
 
@@ -658,14 +657,10 @@
 
 <!-- Splash -->
 <div id="splash">
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
-  <div class="splash-strip"></div>
+  <div class="splash-circle"></div>
+  <div class="splash-circle"></div>
+  <div class="splash-circle"></div>
+  <div class="splash-circle"></div>
 </div>
 
 <!-- Ticker -->
@@ -969,29 +964,45 @@
 <script>
   // ── Splash ──
   (function () {
-    const splash = document.getElementById('splash');
-    const strips = splash.querySelectorAll('.splash-strip');
+    const splash  = document.getElementById('splash');
+    const circles = splash.querySelectorAll('.splash-circle');
     document.body.style.overflow = 'hidden';
 
-    // Generate a random pastel hex — high floor keeps it light,
-    // minimum spread ensures actual hue (not just grey)
+    // Random pastel hex — spread ≥ 65 ensures distinct hue, not grey
     function randomPastelHex() {
       let r, g, b;
       do {
-        r = Math.round(185 + Math.random() * 70);
-        g = Math.round(185 + Math.random() * 70);
-        b = Math.round(185 + Math.random() * 70);
-      } while (Math.max(r, g, b) - Math.min(r, g, b) < 40);
+        r = Math.round(180 + Math.random() * 75);
+        g = Math.round(180 + Math.random() * 75);
+        b = Math.round(180 + Math.random() * 75);
+      } while (Math.max(r, g, b) - Math.min(r, g, b) < 65);
       return '#' + [r, g, b].map(c => Math.min(255, c).toString(16).padStart(2, '0')).join('');
     }
 
-    const shuffled = Array.from({ length: 8 }, randomPastelHex);
+    // Size: large enough that all 4 circles overlap at the center
+    const size = Math.max(window.innerWidth, window.innerHeight) * 1.3;
 
-    // Assign colors — each strip gets a gradient bleeding into the next
-    strips.forEach((strip, i) => {
-      const a = shuffled[i % shuffled.length];
-      const b = shuffled[(i + 1) % shuffled.length];
-      strip.style.background = `linear-gradient(to right, ${a}, ${b})`;
+    // Quadrant centers + slight random drift for freshness
+    const quadrants = [
+      { x: window.innerWidth  * 0.25, y: window.innerHeight * 0.25 },
+      { x: window.innerWidth  * 0.75, y: window.innerHeight * 0.25 },
+      { x: window.innerWidth  * 0.25, y: window.innerHeight * 0.75 },
+      { x: window.innerWidth  * 0.75, y: window.innerHeight * 0.75 },
+    ];
+
+    circles.forEach((circle, i) => {
+      const drift = 60;
+      const cx = quadrants[i].x + (Math.random() - 0.5) * drift;
+      const cy = quadrants[i].y + (Math.random() - 0.5) * drift;
+      circle.style.background = randomPastelHex();
+      gsap.set(circle, {
+        width:    size,
+        height:   size,
+        x:        cx - size / 2,
+        y:        cy - size / 2,
+        scale:    0,
+        transformOrigin: 'center center',
+      });
     });
 
     gsap.set(splash, { filter: 'blur(0px)', opacity: 1 });
@@ -1002,25 +1013,24 @@
         document.body.style.overflow = '';
       }
     })
-    // Strips rise from bottom — fast stagger
-    .to(strips, {
-      scaleY: 1,
-      duration: 0.6,
-      stagger: 0.06,
-      ease: 'expo.inOut',
-      transformOrigin: 'bottom center',
+    // Circles expand from their quadrant centers
+    .to(circles, {
+      scale:    1,
+      duration: 0.75,
+      stagger:  0.08,
+      ease:     'expo.inOut',
     })
-    // Blur strips so gradients mesh into each other
+    // Blur merges the circles into a gradient wash
     .to(splash, {
-      filter: 'blur(48px)',
-      duration: 0.55,
-      ease: 'power2.inOut',
+      filter:   'blur(60px)',
+      duration: 0.5,
+      ease:     'power2.inOut',
     }, '+=0.05')
-    // Fade out the blurred gradient wash
+    // Fade out
     .to(splash, {
-      opacity: 0,
-      duration: 0.65,
-      ease: 'power2.inOut',
+      opacity:  0,
+      duration: 0.7,
+      ease:     'power2.inOut',
     }, '-=0.25');
   })();
 
