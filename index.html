@@ -973,15 +973,19 @@
     const strips = splash.querySelectorAll('.splash-strip');
     document.body.style.overflow = 'hidden';
 
-    // Generate 8 evenly-spaced pastel hues from a random starting point
-    // — guarantees harmony and full complementary spread every load
-    const baseHue = Math.random() * 360;
-    const shuffled = Array.from({ length: 8 }, (_, i) => {
-      const hue   = (baseHue + i * 45 + Math.random() * 20 - 10) % 360;
-      const sat   = Math.round(40 + Math.random() * 22);
-      const light = Math.round(76 + Math.random() * 12);
-      return `hsl(${Math.round(hue)}, ${sat}%, ${light}%)`;
-    });
+    // Generate a random pastel hex — high floor keeps it light,
+    // minimum spread ensures actual hue (not just grey)
+    function randomPastelHex() {
+      let r, g, b;
+      do {
+        r = Math.round(185 + Math.random() * 70);
+        g = Math.round(185 + Math.random() * 70);
+        b = Math.round(185 + Math.random() * 70);
+      } while (Math.max(r, g, b) - Math.min(r, g, b) < 40);
+      return '#' + [r, g, b].map(c => Math.min(255, c).toString(16).padStart(2, '0')).join('');
+    }
+
+    const shuffled = Array.from({ length: 8 }, randomPastelHex);
 
     // Assign colors — each strip gets a gradient bleeding into the next
     strips.forEach((strip, i) => {
