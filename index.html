@@ -992,17 +992,19 @@
       { x: window.innerWidth  * 0.75, y: window.innerHeight * 0.75 },
     ];
 
-    circles.forEach((circle, i) => {
-      const drift = 50;
-      const cx    = quadrants[i].x + (Math.random() - 0.5) * drift;
-      const cy    = quadrants[i].y + (Math.random() - 0.5) * drift;
-      const color = randomPastelHex();
+    const cx = window.innerWidth  / 2;
+    const cy = window.innerHeight / 2;
 
-      // Radial gradient: full color at center → transparent at edge
-      // so circles blend where they overlap instead of hard edges
+    circles.forEach((circle, i) => {
+      const color  = randomPastelHex();
+      const drift  = 50;
+      const destX  = quadrants[i].x + (Math.random() - 0.5) * drift;
+      const destY  = quadrants[i].y + (Math.random() - 0.5) * drift;
+
       circle.style.background =
         `radial-gradient(circle at center, ${color} 0%, ${color}dd 35%, ${color}66 60%, transparent 80%)`;
 
+      // All circles start at the screen centre, collapsed
       gsap.set(circle, {
         width:           size,
         height:          size,
@@ -1011,31 +1013,38 @@
         scale:           0,
         transformOrigin: 'center center',
       });
+
+      // Store destination for the timeline
+      circle._dest = { x: destX - size / 2, y: destY - size / 2 };
     });
 
     gsap.set(splash, { filter: 'blur(0px)', opacity: 1 });
 
-    gsap.timeline({
+    const tl = gsap.timeline({
       onComplete() {
         splash.remove();
         document.body.style.overflow = '';
       }
-    })
-    // All 4 circles expand simultaneously — transparent edges overlap
-    // and blend via multiply, colours combine at the centre like a Pantone wheel
-    .to(circles, {
-      scale:    1,
-      duration: 1.0,
-      stagger:  0.06,
-      ease:     'expo.inOut',
-    })
-    // Soften edges so the combined gradients feel seamless
-    .to(splash, {
+    });
+
+    // Each circle shoots from centre toward its corner while expanding
+    circles.forEach((circle, i) => {
+      tl.to(circle, {
+        x:        circle._dest.x,
+        y:        circle._dest.y,
+        scale:    1,
+        duration: 1.0,
+        ease:     'expo.inOut',
+      }, i * 0.06); // slight stagger — feels like they burst outward
+    });
+
+    // Soften once expanded
+    tl.to(splash, {
       filter:   'blur(30px)',
       duration: 0.45,
       ease:     'power2.inOut',
-    }, '-=0.3')
-    // Fade out to reveal dark site
+    }, '-=0.35')
+    // Fade to reveal site
     .to(splash, {
       opacity:  0,
       duration: 0.7,
