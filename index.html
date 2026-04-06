@@ -97,6 +97,20 @@
       will-change: filter, opacity;
     }
 
+    /* 4 white quadrant triangles — apex at centre, shoot toward each corner */
+    .splash-arrow {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      transform: scale(0);
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+    .splash-arrow:nth-child(1) { clip-path: polygon(50% 50%, 50% 0%,   0%   0%,  0%  50%); }
+    .splash-arrow:nth-child(2) { clip-path: polygon(50% 50%, 50% 0%,  100%  0%, 100% 50%); }
+    .splash-arrow:nth-child(3) { clip-path: polygon(50% 50%,  0% 50%,  0%  100%, 50% 100%); }
+    .splash-arrow:nth-child(4) { clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%); }
+
     .splash-circle {
       position: absolute;
       border-radius: 50%;
@@ -659,6 +673,10 @@
 
 <!-- Splash -->
 <div id="splash">
+  <div class="splash-arrow"></div>
+  <div class="splash-arrow"></div>
+  <div class="splash-arrow"></div>
+  <div class="splash-arrow"></div>
   <div class="splash-circle"></div>
   <div class="splash-circle"></div>
   <div class="splash-circle"></div>
@@ -967,6 +985,7 @@
   // ── Splash ──
   (function () {
     const splash  = document.getElementById('splash');
+    const arrows  = splash.querySelectorAll('.splash-arrow');
     const circles = splash.querySelectorAll('.splash-circle');
     document.body.style.overflow = 'hidden';
 
@@ -1027,15 +1046,23 @@
       }
     });
 
-    // Each circle shoots from centre toward its corner while expanding
+    // White arrows shoot from centre toward each corner
+    tl.to(arrows, {
+      scale:    1,
+      duration: 0.55,
+      stagger:  0.04,
+      ease:     'expo.out',
+    });
+
+    // Coloured circles follow — burst from centre toward corners
     circles.forEach((circle, i) => {
       tl.to(circle, {
         x:        circle._dest.x,
         y:        circle._dest.y,
         scale:    1,
-        duration: 1.0,
+        duration: 0.9,
         ease:     'expo.inOut',
-      }, i * 0.06); // slight stagger — feels like they burst outward
+      }, `-=0.4`);
     });
 
     // Soften once expanded
@@ -1043,7 +1070,7 @@
       filter:   'blur(30px)',
       duration: 0.45,
       ease:     'power2.inOut',
-    }, '-=0.35')
+    }, '-=0.3')
     // Fade to reveal site
     .to(splash, {
       opacity:  0,
