@@ -93,12 +93,14 @@
       z-index: 99999;
       pointer-events: none;
       overflow: hidden;
+      background: #fff;
       will-change: filter, opacity;
     }
 
     .splash-circle {
       position: absolute;
       border-radius: 50%;
+      mix-blend-mode: multiply;
       will-change: transform;
     }
 
@@ -991,16 +993,22 @@
     ];
 
     circles.forEach((circle, i) => {
-      const drift = 60;
-      const cx = quadrants[i].x + (Math.random() - 0.5) * drift;
-      const cy = quadrants[i].y + (Math.random() - 0.5) * drift;
-      circle.style.background = randomPastelHex();
+      const drift = 50;
+      const cx    = quadrants[i].x + (Math.random() - 0.5) * drift;
+      const cy    = quadrants[i].y + (Math.random() - 0.5) * drift;
+      const color = randomPastelHex();
+
+      // Radial gradient: full color at center → transparent at edge
+      // so circles blend where they overlap instead of hard edges
+      circle.style.background =
+        `radial-gradient(circle at center, ${color} 0%, ${color}dd 35%, ${color}66 60%, transparent 80%)`;
+
       gsap.set(circle, {
-        width:    size,
-        height:   size,
-        x:        cx - size / 2,
-        y:        cy - size / 2,
-        scale:    0,
+        width:           size,
+        height:          size,
+        x:               cx - size / 2,
+        y:               cy - size / 2,
+        scale:           0,
         transformOrigin: 'center center',
       });
     });
@@ -1013,25 +1021,26 @@
         document.body.style.overflow = '';
       }
     })
-    // Circles expand from their quadrant centers
+    // All 4 circles expand simultaneously — transparent edges overlap
+    // and blend via multiply, colours combine at the centre like a Pantone wheel
     .to(circles, {
       scale:    1,
-      duration: 0.75,
-      stagger:  0.08,
+      duration: 1.0,
+      stagger:  0.06,
       ease:     'expo.inOut',
     })
-    // Blur merges the circles into a gradient wash
+    // Soften edges so the combined gradients feel seamless
     .to(splash, {
-      filter:   'blur(60px)',
-      duration: 0.5,
+      filter:   'blur(30px)',
+      duration: 0.45,
       ease:     'power2.inOut',
-    }, '+=0.05')
-    // Fade out
+    }, '-=0.3')
+    // Fade out to reveal dark site
     .to(splash, {
       opacity:  0,
       duration: 0.7,
       ease:     'power2.inOut',
-    }, '-=0.25');
+    }, '+=0.05');
   })();
 
   // ── Ticker ──
