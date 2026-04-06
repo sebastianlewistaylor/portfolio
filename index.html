@@ -973,20 +973,15 @@
     const strips = splash.querySelectorAll('.splash-strip');
     document.body.style.overflow = 'hidden';
 
-    // Pastel Pantone palette — soft, muted, complementary
-    const PALETTE = [
-      '#F2B8D0', // dusty rose
-      '#C9B8F0', // soft violet
-      '#F5CBAA', // peach
-      '#AAD8ED', // powder blue
-      '#F5EAA8', // butter yellow
-      '#B8C8F5', // periwinkle
-      '#F0B8E0', // soft magenta
-      '#AAE8CF', // mint cream
-    ];
-
-    // Shuffle palette so it's different every load
-    const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
+    // Generate 8 evenly-spaced pastel hues from a random starting point
+    // — guarantees harmony and full complementary spread every load
+    const baseHue = Math.random() * 360;
+    const shuffled = Array.from({ length: 8 }, (_, i) => {
+      const hue   = (baseHue + i * 45 + Math.random() * 20 - 10) % 360;
+      const sat   = Math.round(40 + Math.random() * 22);
+      const light = Math.round(76 + Math.random() * 12);
+      return `hsl(${Math.round(hue)}, ${sat}%, ${light}%)`;
+    });
 
     // Assign colors — each strip gets a gradient bleeding into the next
     strips.forEach((strip, i) => {
