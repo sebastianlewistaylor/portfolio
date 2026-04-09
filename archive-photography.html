@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photography — Sebastian Taylor</title>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">
+  <style>
+    :root{--bg:#0c0c0c;--fg:#f0ede8;--muted:#555;--border:rgba(240,237,232,0.08);--accent:#7ab3d4;--pad:clamp(1.5rem,3vw,3rem);}
+    *{margin:0;padding:0;box-sizing:border-box;} html{font-size:16px;} body{background:var(--bg);color:var(--fg);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;overflow-x:hidden;cursor:none;}
+    ::selection{background:var(--accent);color:#000;} ::-webkit-scrollbar{width:0;} *{-webkit-font-smoothing:antialiased;}
+    .cursor{position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--fg);line-height:1;user-select:none;}
+    .cursor-follower{position:fixed;left:0;top:0;width:80px;height:80px;background:var(--accent);mix-blend-mode:difference;border-radius:50%;pointer-events:none;z-index:9998;}
+    body.cursor-hover .cursor-follower{width:110px;height:110px;}
+    #page-transition{position:fixed;inset:0;z-index:99998;background:#7ab3d4;transform:scaleX(1);transform-origin:right center;will-change:transform;pointer-events:none;}
+    #page-transition.wipe-out{animation:pt-out 0.5s cubic-bezier(0.76,0,0.24,1) forwards;}
+    #page-transition.wipe-in{pointer-events:all;animation:pt-in 0.42s cubic-bezier(0.76,0,0.24,1) forwards;}
+    @keyframes pt-out{from{transform:scaleX(1);transform-origin:right center;}to{transform:scaleX(0);transform-origin:right center;}}
+    @keyframes pt-in{from{transform:scaleX(0);transform-origin:left center;}to{transform:scaleX(1);transform-origin:left center;}}
+    .p-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:24px var(--pad);border-bottom:1px solid var(--border);background:rgba(12,12,12,0.85);backdrop-filter:blur(12px);}
+    .p-nav-back{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);text-decoration:none;cursor:none;transition:color 0.2s;}
+    .p-nav-back:hover{color:var(--fg);} .p-nav-back::before{content:'← ';}
+    .p-nav-name{font-family:'bickham-script-pro-3',Georgia,serif;font-size:1.1rem;font-style:normal;color:var(--fg);text-decoration:none;cursor:none;}
+    .p-hero{width:100%;height:100vh;background:#111;overflow:hidden;}
+    .p-hero img{width:100%;height:100%;object-fit:cover;display:block;}
+    .p-info{padding:80px var(--pad) 60px;display:grid;grid-template-columns:1fr 1fr;gap:60px;border-bottom:1px solid var(--border);}
+    .p-title{font-family:'bickham-script-pro-3',Georgia,serif;font-size:clamp(2.5rem,5vw,4rem);font-style:normal;color:var(--fg);line-height:1.1;margin-bottom:8px;}
+    .p-subtitle{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);margin-bottom:32px;}
+    .p-body{font-size:14px;line-height:1.8;color:rgba(240,237,232,0.7);max-width:520px;}
+    .p-meta{display:flex;flex-direction:column;gap:24px;padding-top:8px;}
+    .p-meta-label{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .p-meta-value{font-size:13px;color:var(--fg);}
+    .p-images{display:flex;flex-direction:column;gap:2px;}
+    .p-images img{width:100%;display:block;}
+    .p-back-row{display:flex;justify-content:space-between;align-items:center;padding:48px var(--pad);border-top:1px solid var(--border);cursor:none;text-decoration:none;position:relative;overflow:hidden;}
+    .p-back-row-bg{position:absolute;inset:0;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform 0.5s cubic-bezier(0.76,0,0.24,1);}
+    .p-back-row:hover .p-back-row-bg{transform:scaleX(1);}
+    .p-back-label{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);position:relative;z-index:1;transition:color 0.3s;}
+    .p-back-row:hover .p-back-label{color:#000;}
+    .p-back-title{font-family:'bickham-script-pro-3',Georgia,serif;font-size:1.4rem;font-style:normal;color:var(--fg);position:relative;z-index:1;transition:color 0.3s;}
+    .p-back-row:hover .p-back-title{color:#000;}
+    .p-back-arrow{font-size:18px;color:var(--fg);position:relative;z-index:1;transition:transform 0.3s,color 0.3s;}
+    .p-back-row:hover .p-back-arrow{transform:translate(4px,-4px);color:#000;}
+    @media(max-width:768px){.p-info{grid-template-columns:1fr;gap:40px;}}
+  </style>
+</head>
+<body>
+<div id="page-transition"></div>
+<div class="cursor" id="cursor">®</div>
+<div class="cursor-follower" id="cursorFollower"></div>
+<nav class="p-nav">
+  <a class="p-nav-back" href="index.html" id="back-link">Archive</a>
+  <a class="p-nav-name" href="index.html">Sebastian Taylor</a>
+</nav>
+<div class="p-hero"><img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/a384b381-a583-42ab-832c-d532d873d553_rw_1920.jpg?h=1b08e9557c941e37ef6a9e70e5d5f150" alt="Photography" loading="eager"></div>
+<section class="p-info">
+  <div>
+    <div class="p-title">Photography</div>
+    <div class="p-subtitle">The Image as Document</div>
+    <p class="p-body">Documentary and fine art photography spanning landscapes, portraiture, and cultural observation. Each image is a position — an argument about what deserves to be looked at and how.</p>
+  </div>
+  <div class="p-meta">
+    <div><div class="p-meta-label">Period</div><div class="p-meta-value">2021–</div></div>
+    <div><div class="p-meta-label">Studio</div><div class="p-meta-value">FAUX™ / Sebastian Taylor</div></div>
+  </div>
+</section>
+<div class="p-images">  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/089adafa-2653-475f-8fad-c58774ac61ea_rw_1920.jpeg?h=c6d262e7442abc42c19d428207a5dd54" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/09ea5547-f283-4025-b75d-b32a24df4a0b_rw_1920.jpg?h=9e295d5fc7698499510d7822d9611b4e" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/689f97be-a94e-4df9-ab87-8630807cc8a0_rw_1920.jpg?h=4b64c483d6c91de410ecabef3133131c" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/72daa70a-00a7-43b4-a572-92aff8c14bf2_rw_1920.JPG?h=c86eb661642f0963349029b7ac5ae703" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/7cc0077c-89a3-44e0-8c32-16b8e2c5d0e1_rw_1920.jpg?h=c8aa85ac8c8d950108c40539c1eae14e" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/8281dc1b-842d-4661-9a7a-4cf7ecad08ba_rw_1920.jpg?h=54ff461cf28f9dda13da743488627ad2" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/cba3c378-8356-4b8b-96e3-c56931e1c177_rw_1920.jpg?h=e07b0e1db2d45fc897185e820f26c63a" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/d508ee4f-a13d-4865-a4e8-34961c7cf130_rw_1920.JPG?h=7171e106708b2b877df2ee9854237835" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/d9eb11ba-f97d-4804-aa1b-143031621752_rw_1920.jpg?h=f49cb6ec0b1762f42719b5b711bf6718" alt="" loading="lazy"></div>
+<a class="p-back-row" href="index.html" id="back-link2">
+  <div class="p-back-row-bg"></div>
+  <div><div class="p-back-label">Back to</div><div class="p-back-title">All Work</div></div>
+  <div class="p-back-arrow">↗</div>
+</a>
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+  const cursor=document.getElementById('cursor'),follower=document.getElementById('cursorFollower');
+  let mx=window.innerWidth/2,my=window.innerHeight/2,fx=mx,fy=my;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  document.querySelectorAll('a').forEach(el=>{el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));});
+  (function tick(){cursor.style.left=mx+'px';cursor.style.top=my+'px';fx+=(mx-fx)*0.08;fy+=(my-fy)*0.08;gsap.set(follower,{x:fx-40,y:fy-40});requestAnimationFrame(tick);})();
+  const pt=document.getElementById('page-transition');
+  const sc=sessionStorage.getItem('pt-color')||'#7ab3d4';
+  pt.style.background=sc;
+  requestAnimationFrame(()=>{pt.classList.add('wipe-out');pt.addEventListener('animationend',()=>{pt.style.transform='scaleX(0)';pt.classList.remove('wipe-out');},{once:true});});
+  function nav(href,color){pt.style.background=color;pt.style.transform='';pt.classList.remove('wipe-out');pt.classList.add('wipe-in');sessionStorage.setItem('pt-color',color);setTimeout(()=>{window.location.href=href;},440);}
+  document.getElementById('back-link').addEventListener('click',e=>{e.preventDefault();nav('index.html','#7ab3d4');});
+  document.getElementById('back-link2').addEventListener('click',e=>{e.preventDefault();nav('index.html','#7ab3d4');});
+  const lenis=new Lenis({lerp:0.08});
+  (function raf(t){lenis.raf(t);requestAnimationFrame(raf);})(0);
+</script>
+</body></html>

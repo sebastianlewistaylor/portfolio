@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Humboldt International Film Festival — Sebastian Taylor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">
+  <style>
+    :root {
+      --bg: #0c0c0c; --fg: #f0ede8; --muted: #555;
+      --border: rgba(240,237,232,0.08);
+      --accent: #c97a7a; --pad: clamp(1.5rem, 3vw, 3rem);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { font-size:16px; scroll-behavior:auto; }
+    body { background:var(--bg); color:var(--fg); font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; overflow-x:hidden; cursor:none; }
+    ::selection { background:var(--accent); color:#000; }
+    ::-webkit-scrollbar { width:0; }
+    * { -webkit-font-smoothing:antialiased; }
+
+    .cursor { position:fixed; pointer-events:none; z-index:9999; transform:translate(-50%,-50%); width:48px; height:48px; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--fg); line-height:1; transition:font-size 0.3s cubic-bezier(0.76,0,0.24,1); user-select:none; }
+    .cursor-follower { position:fixed; left:0; top:0; width:80px; height:80px; background:var(--accent); mix-blend-mode:difference; border-radius:50%; pointer-events:none; z-index:9998; transition:width 0.3s cubic-bezier(0.76,0,0.24,1),height 0.3s cubic-bezier(0.76,0,0.24,1); }
+    body.cursor-hover .cursor { font-size:22px; width:80px; height:80px; }
+    body.cursor-hover .cursor-follower { width:110px; height:110px; }
+
+    #page-transition { position:fixed; inset:0; z-index:99998; background:#c97a7a; transform:scaleX(1); transform-origin:right center; will-change:transform; }
+    #page-transition.wipe-out { animation:pt-out 0.5s cubic-bezier(0.76,0,0.24,1) forwards; }
+    #page-transition.wipe-in { pointer-events:all; animation:pt-in 0.42s cubic-bezier(0.76,0,0.24,1) forwards; }
+    @keyframes pt-out { from{transform:scaleX(1);transform-origin:right center;} to{transform:scaleX(0);transform-origin:right center;} }
+    @keyframes pt-in { from{transform:scaleX(0);transform-origin:left center;} to{transform:scaleX(1);transform-origin:left center;} }
+
+    .p-nav { position:fixed; top:0; left:0; right:0; z-index:100; display:flex; justify-content:space-between; align-items:center; padding:24px var(--pad); border-bottom:1px solid var(--border); background:rgba(12,12,12,0.85); backdrop-filter:blur(12px); }
+    .p-nav-back { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); text-decoration:none; cursor:none; transition:color 0.2s; display:flex; align-items:center; gap:8px; }
+    .p-nav-back:hover { color:var(--fg); }
+    .p-nav-back::before { content:'←'; }
+    .p-nav-name { font-family:'bickham-script-pro-3',Georgia,serif; font-size:1.1rem; font-style:normal; color:var(--fg); text-decoration:none; cursor:none; }
+
+    .p-hero { width:100%; height:100vh; background:#111; overflow:hidden; position:relative; }
+    .p-hero img { width:100%; height:100%; object-fit:cover; display:block; }
+
+    .p-info { padding:80px var(--pad) 60px; display:grid; grid-template-columns:1fr 1fr; gap:60px; border-bottom:1px solid var(--border); }
+    .p-title { font-family:'bickham-script-pro-3',Georgia,serif; font-size:clamp(2.5rem,5vw,4rem); font-style:normal; color:var(--fg); line-height:1.1; margin-bottom:8px; }
+    .p-subtitle { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); margin-bottom:32px; }
+    .p-body { font-size:14px; line-height:1.8; color:rgba(240,237,232,0.7); max-width:520px; }
+    .p-meta { display:flex; flex-direction:column; gap:24px; padding-top:8px; }
+    .p-meta-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+    .p-meta-value { font-size:13px; color:var(--fg); }
+
+    .p-images { display:flex; flex-direction:column; gap:2px; }
+    .p-images img { width:100%; display:block; }
+
+    .p-next { display:flex; justify-content:space-between; align-items:center; padding:48px var(--pad); border-top:1px solid var(--border); cursor:none; text-decoration:none; position:relative; overflow:hidden; }
+    .p-next-bg { position:absolute; inset:0; background:#8ecfa0; transform:scaleX(0); transform-origin:left center; transition:transform 0.5s cubic-bezier(0.76,0,0.24,1); }
+    .p-next:hover .p-next-bg { transform:scaleX(1); }
+    .p-next-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); position:relative; z-index:1; transition:color 0.3s; }
+    .p-next:hover .p-next-label { color:#000; }
+    .p-next-title { font-family:'bickham-script-pro-3',Georgia,serif; font-size:1.4rem; font-style:normal; color:var(--fg); position:relative; z-index:1; transition:color 0.3s; }
+    .p-next:hover .p-next-title { color:#000; }
+    .p-next-arrow { font-size:18px; color:var(--fg); position:relative; z-index:1; transition:transform 0.3s,color 0.3s; }
+    .p-next:hover .p-next-arrow { transform:translate(4px,-4px); color:#000; }
+
+    @media(max-width:768px) { .p-info { grid-template-columns:1fr; gap:40px; } }
+  </style>
+</head>
+<body>
+<div id="page-transition"></div>
+<div class="cursor" id="cursor">®</div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
+<nav class="p-nav">
+  <a class="p-nav-back" href="index.html" id="back-link">Work</a>
+  <a class="p-nav-name" href="index.html">Sebastian Taylor</a>
+</nav>
+
+<div class="p-hero">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/52db805c-84ae-42bd-a98c-83ffb7ecbda5_rwc_0x0x3000x2345x1920.jpg?h=2cc22b261979c04af8d5f2068f250fec" alt="Humboldt International Film Festival" loading="eager">
+</div>
+
+<section class="p-info">
+  <div>
+    <div class="p-title">Humboldt International Film Festival</div>
+    <div class="p-subtitle">A Laurel Rooted in Place</div>
+    <p class="p-body">Where the traditional olive branch cedes to the Redwood — one of the last of its kind on earth. The festival identity was built around this substitution: a design decision that doubles as an act of ecological witness, placing Humboldt County at the center of its own cultural story. The laurel design system extends across all festival materials, rooting a global format in deeply local meaning.</p>
+  </div>
+  <div class="p-meta">
+    <div><div class="p-meta-label">Year</div><div class="p-meta-value">2024</div></div>
+    <div><div class="p-meta-label">Client</div><div class="p-meta-value">HIFF</div></div>
+    <div><div class="p-meta-label">Disciplines</div><div class="p-meta-value">Graphic Design, Art Direction, Identity</div></div>
+  </div>
+</section>
+
+<div class="p-images">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/bc65f110-f1ed-433e-a448-13d897660dff_rwc_17x0x1898x1484x1920.jpg?h=3d3f9b4688546b185dc257a0922fc02b" alt="" loading="lazy">
+  <img src="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/c4203f82-f6d6-419e-abca-d750c227bd22_rwc_358x822x1791x1400x1920.jpg?h=7bc62354e6a778f14f4e5c6ef63a9191" alt="" loading="lazy">
+</div>
+
+<a class="p-next" href="fine-art-prints.html" id="next-link">
+  <div class="p-next-bg"></div>
+  <div>
+    <div class="p-next-label">Next Project</div>
+    <div class="p-next-title">Fine Art Prints</div>
+  </div>
+  <div class="p-next-arrow">↗</div>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+  const cursor = document.getElementById('cursor');
+  const follower = document.getElementById('cursorFollower');
+  let mx = window.innerWidth/2, my = window.innerHeight/2, fx = mx, fy = my;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+  document.querySelectorAll('a,button').forEach(el => {
+    el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+    el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+  });
+  (function tick() {
+    cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+    fx+=(mx-fx)*0.08; fy+=(my-fy)*0.08;
+    gsap.set(follower,{x:fx-40,y:fy-40});
+    requestAnimationFrame(tick);
+  })();
+
+  const pt = document.getElementById('page-transition');
+  const savedColor = sessionStorage.getItem('pt-color') || '#c97a7a';
+  pt.style.background = savedColor;
+  requestAnimationFrame(() => {
+    pt.classList.add('wipe-out');
+    pt.addEventListener('animationend', () => { pt.style.transform='scaleX(0)'; pt.classList.remove('wipe-out'); }, {once:true});
+  });
+
+  function nav(href, color) {
+    pt.style.background = color;
+    pt.style.transform = '';
+    pt.classList.remove('wipe-out');
+    pt.classList.add('wipe-in');
+    sessionStorage.setItem('pt-color', color);
+    setTimeout(() => { window.location.href = href; }, 440);
+  }
+
+  document.getElementById('back-link').addEventListener('click', e => { e.preventDefault(); nav('index.html', '#c97a7a'); });
+  document.getElementById('next-link').addEventListener('click', e => { e.preventDefault(); nav(e.currentTarget.href, '#8ecfa0'); });
+
+  const lenis = new Lenis({lerp:0.08});
+  (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+</script>
+</body>
+</html>

@@ -487,12 +487,29 @@
       width: 100%;
       height: 100%;
       background: #1a1a1a;
+      background-size: cover;
+      background-position: center;
       border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      justify-content: flex-end;
+      padding: 14px;
+      gap: 4px;
+      position: relative;
+    }
+
+    .p-preview-inner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .p-preview-label,
+    .p-preview-title {
+      position: relative;
+      z-index: 1;
     }
 
     .p-preview-label {
@@ -530,11 +547,10 @@
     .archive-cell-inner {
       position: absolute;
       inset: 0;
-      background: #111;
+      background-color: #111;
+      background-size: cover;
+      background-position: center;
       transition: transform 0.6s cubic-bezier(0.76,0,0.24,1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .archive-cell:hover .archive-cell-inner {
@@ -567,13 +583,6 @@
     .archive-year {
       font-size: 10px;
       color: var(--muted);
-    }
-
-    .archive-placeholder-text {
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #2a2a2a;
     }
 
     /* ── Contact ── */
@@ -676,6 +685,25 @@
     @keyframes lineGrow {
       to { transform: scaleX(1); }
     }
+    /* ── Page Transition ── */
+    #page-transition {
+      position: fixed;
+      inset: 0;
+      z-index: 99998;
+      transform: scaleX(0);
+      transform-origin: left center;
+      background: var(--active-color);
+      will-change: transform;
+      pointer-events: none;
+    }
+    #page-transition.wipe-in {
+      pointer-events: all;
+      animation: pt-in 0.42s cubic-bezier(0.76,0,0.24,1) forwards;
+    }
+    @keyframes pt-in {
+      from { transform: scaleX(0); transform-origin: left center; }
+      to   { transform: scaleX(1); transform-origin: left center; }
+    }
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
@@ -710,6 +738,7 @@
 </div>
 
 <!-- Cursor -->
+<div id="page-transition"></div>
 <div class="cursor" id="cursor">®</div>
 <div class="cursor-follower" id="cursorFollower"></div>
 
@@ -774,7 +803,7 @@
 
     <div class="project-list">
 
-      <a class="project-row fade-up" href="#" data-title="Justin Mead Maxon" data-color="#c9a96e">
+      <a class="project-row fade-up" href="#" data-title="Justin Mead Maxon" data-slug="justin-mead-maxon" data-color="#c9a96e" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/3fa0aae4-5efc-44b5-84e2-113781f26915_rw_1920.jpg?h=e61cda3c1f405a0a15bb449194ef89bc">
         <div class="project-row-bg"></div>
         <div class="p-num">01</div>
         <div class="p-info">
@@ -790,7 +819,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Internet Journal" data-color="#7ab3d4">
+      <a class="project-row fade-up" href="#" data-title="Internet Journal" data-slug="internet-journal" data-color="#7ab3d4" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/a3da0af9-97e7-4623-81b8-8cdfc92f060c_rw_1920.png?h=049be3f625a0ab504fc05b26f5807755">
         <div class="project-row-bg"></div>
         <div class="p-num">02</div>
         <div class="p-info">
@@ -806,7 +835,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Humboldt Film Festival" data-color="#c97a7a">
+      <a class="project-row fade-up" href="#" data-title="Humboldt Film Festival" data-slug="humboldt-film-festival" data-color="#c97a7a" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/cf485c2c-3f5d-4a62-8553-c67b48ad322c_rw_1920.jpg?h=e5bc5533e662243da649bcece5b0ddc1">
         <div class="project-row-bg"></div>
         <div class="p-num">03</div>
         <div class="p-info">
@@ -822,7 +851,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Fine Art Prints" data-color="#8ecfa0">
+      <a class="project-row fade-up" href="#" data-title="Fine Art Prints" data-slug="fine-art-prints" data-color="#8ecfa0" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/41097768-2a82-4e28-8990-60884e54c29e_rw_1920.jpg?h=739215b03693331a26a97657a5d17dfe">
         <div class="project-row-bg"></div>
         <div class="p-num">04</div>
         <div class="p-info">
@@ -838,7 +867,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Ijal Morgan — Tired of Resting" data-color="#b08ec9">
+      <a class="project-row fade-up" href="#" data-title="Ijal Morgan — Tired of Resting" data-slug="ijal-morgan" data-color="#b08ec9" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/8b27b4eb-9029-44a6-8392-8fd57659bd2b_rw_1920.jpg?h=11a3c8c50ba43c0a6470d4c67c999f93">
         <div class="project-row-bg"></div>
         <div class="p-num">05</div>
         <div class="p-info">
@@ -854,7 +883,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Digital Laboratory Poster Campaign" data-color="#c9956e">
+      <a class="project-row fade-up" href="#" data-title="Digital Laboratory Poster Campaign" data-slug="digital-lab-poster" data-color="#c9956e" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/6866fb92-9f30-48d6-adae-4bdfa4eda667_rw_1920.jpg?h=c8f11ed919580f89ee3403cb6fdb5fc5">
         <div class="project-row-bg"></div>
         <div class="p-num">06</div>
         <div class="p-info">
@@ -870,7 +899,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="CTL — Cal Poly Humboldt" data-color="#6ec9c9">
+      <a class="project-row fade-up" href="#" data-title="CTL — Cal Poly Humboldt" data-slug="ctl-cal-poly" data-color="#6ec9c9" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/7ce5fa5c-db33-4b15-a780-b0022bf54847_rw_1920.jpeg?h=ecd8bbf5256093338ee1f221af2c6a92">
         <div class="project-row-bg"></div>
         <div class="p-num">07</div>
         <div class="p-info">
@@ -886,7 +915,7 @@
         <div class="p-arrow">↗</div>
       </a>
 
-      <a class="project-row fade-up" href="#" data-title="Digital Laboratory — Cal Poly" data-color="#c9c06e">
+      <a class="project-row fade-up" href="#" data-title="Digital Laboratory — Cal Poly" data-slug="digital-lab-cal-poly" data-color="#c9c06e" data-img="https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/38e3c55d-eced-41c8-b008-e27c22460ae7_rw_1920.JPEG?h=3e73ed72ac2d81cf17152cf754dafbe2">
         <div class="project-row-bg"></div>
         <div class="p-num">08</div>
         <div class="p-info">
@@ -912,59 +941,47 @@
       <div class="s-label-line line-expand"></div>
     </div>
     <div class="archive-grid">
-      <div class="archive-cell fade-up">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">FAUX™</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-faux.html" data-color="#c8c2f5" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/3fa0aae4-5efc-44b5-84e2-113781f26915_rw_1920.jpg?h=e61cda3c1f405a0a15bb449194ef89bc')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">FAUX™ Studio</div>
           <div class="archive-year">2020–</div>
-        </div>
+        </div></a>
       </div>
-      <div class="archive-cell fade-up" style="animation-delay:0.07s">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">Series</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-enchanted.html" data-color="#b08ec9" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/8b27b4eb-9029-44a6-8392-8fd57659bd2b_rw_1920.jpg?h=11a3c8c50ba43c0a6470d4c67c999f93')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Enchanted Series</div>
           <div class="archive-year">2022</div>
-        </div>
+        </div></a>
       </div>
-      <div class="archive-cell fade-up" style="animation-delay:0.14s">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">Photo</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-photography.html" data-color="#7ab3d4" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/a384b381-a583-42ab-832c-d532d873d553_rw_1920.jpg?h=1b08e9557c941e37ef6a9e70e5d5f150')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Photography</div>
           <div class="archive-year">2021–</div>
-        </div>
+        </div></a>
       </div>
-      <div class="archive-cell fade-up" style="animation-delay:0.21s">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">Print</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-print.html" data-color="#c9956e" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/6866fb92-9f30-48d6-adae-4bdfa4eda667_rw_1920.jpg?h=c8f11ed919580f89ee3403cb6fdb5fc5')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Print Work</div>
           <div class="archive-year">2023</div>
-        </div>
+        </div></a>
       </div>
-      <div class="archive-cell fade-up" style="animation-delay:0.28s">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">Edit</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-editorial.html" data-color="#7ab3d4" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/1a5ad821-00da-4c37-a9b9-3260553441e8_rw_1920.jpg?h=d6a142e23debf5fecefd61044a4d24c9')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Editorial</div>
           <div class="archive-year">2023–</div>
-        </div>
+        </div></a>
       </div>
-      <div class="archive-cell fade-up" style="animation-delay:0.35s">
-        <div class="archive-cell-inner">
-          <span class="archive-placeholder-text">Misc</span>
-        </div>
+      <a class="archive-cell fade-up" href="archive-misc.html" data-color="#8ecfa0" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/0bc5987e-798c-44db-aee0-e6f422b36d21_rw_1920.jpg?h=6b49785c2eb989cf7c83d4af2cffe6cc')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Miscellaneous</div>
           <div class="archive-year">2020–</div>
-        </div>
+        </div></a>
       </div>
     </div>
   </section>
@@ -1359,9 +1376,22 @@
   // ── Project row hover preview ──
   const preview = document.getElementById('preview');
   const previewTitle = document.getElementById('previewTitle');
+  const previewInner = preview.querySelector('.p-preview-inner');
   const projectRows = document.querySelectorAll('.project-row');
 
   projectRows.forEach(row => {
+    row.addEventListener('click', (e) => {
+      e.preventDefault();
+      const slug = row.dataset.slug;
+      if (!slug) return;
+      const color = row.dataset.color || '#c8c2f5';
+      const pt = document.getElementById('page-transition');
+      pt.style.background = color;
+      pt.classList.add('wipe-in');
+      sessionStorage.setItem('pt-color', color);
+      setTimeout(() => { window.location.href = slug + '.html'; }, 430);
+    });
+
     row.addEventListener('mousemove', (e) => {
       gsap.to(preview, {
         x: e.clientX + 24,
@@ -1371,6 +1401,9 @@
       });
       preview.classList.add('show');
       previewTitle.textContent = row.dataset.title || '—';
+      if (row.dataset.img) {
+        previewInner.style.backgroundImage = `url(${row.dataset.img})`;
+      }
     });
 
     row.addEventListener('mouseleave', () => {
@@ -1378,11 +1411,26 @@
     });
   });
 
+  // ── Archive cell clicks ──
+  document.querySelectorAll('.archive-cell[href]').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      e.preventDefault();
+      const color = cell.dataset.color || '#c8c2f5';
+      const pt = document.getElementById('page-transition');
+      pt.style.background = color;
+      pt.classList.add('wipe-in');
+      sessionStorage.setItem('pt-color', color);
+      setTimeout(() => { window.location.href = cell.getAttribute('href'); }, 430);
+    });
+  });
+
   // ── Nav smooth scroll ──
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
-      const target = document.querySelector(a.getAttribute('href'));
+      const href = a.getAttribute('href');
+      if (href === '#') return;
+      const target = document.querySelector(href);
       if (target) lenis.scrollTo(target, { offset: -60, duration: 1.4, easing: t => 1 - Math.pow(1 - t, 3) });
     });
   });
