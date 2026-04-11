@@ -363,6 +363,96 @@
     });
   })();
 
+  // --- Music player ---
+  (function initMusic() {
+    const DEFAULT_VID  = 'DcNLfwlXGqw';
+    const DEFAULT_LIST = 'RDDcNLfwlXGqw';
+
+    function storedVid()  { return localStorage.getItem('music-vid')  || DEFAULT_VID;  }
+    function storedList() { return localStorage.getItem('music-list') || DEFAULT_LIST; }
+
+    // Toggle button
+    const btn = document.createElement('button');
+    btn.id = 'music-btn';
+    btn.setAttribute('aria-label', 'Toggle music');
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 1L5.5 3.5V10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3.5" cy="10.5" r="2" fill="currentColor"/><circle cx="11" cy="8.5" r="2" fill="currentColor"/></svg>`;
+    document.body.appendChild(btn);
+
+    // Off-screen player wrapper (technically rendered, just out of view)
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:113px;pointer-events:none;z-index:1;';
+    const playerEl = document.createElement('div');
+    playerEl.id = 'yt-music-player';
+    wrap.appendChild(playerEl);
+    document.body.appendChild(wrap);
+
+    let player = null, playerReady = false, isPlaying = false;
+    // If user hasn't explicitly paused, try to play (covers first-load and page-navigation cases)
+    const resumeIntent = sessionStorage.getItem('music-state') !== 'paused';
+
+    function updateBtn() { btn.classList.toggle('playing', isPlaying); }
+
+    function initPlayer() {
+      player = new YT.Player('yt-music-player', {
+        width: 200, height: 113,
+        videoId: storedVid(),
+        playerVars: {
+          autoplay: 1,
+          list: storedList(),
+          listType: 'playlist',
+          controls: 0, disablekb: 1, fs: 0,
+          iv_load_policy: 3, modestbranding: 1, rel: 0,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady(e) {
+            playerReady = true;
+            if (resumeIntent) e.target.playVideo();
+            else e.target.pauseVideo();
+          },
+          onStateChange(e) {
+            isPlaying = e.data === 1; // YT.PlayerState.PLAYING
+            sessionStorage.setItem('music-state', isPlaying ? 'playing' : 'paused');
+            updateBtn();
+          },
+          onError() {
+            // Radio list may be restricted — fall back to single-video loop
+            if (player) player.loadVideoById({ videoId: storedVid(), suggestedQuality: 'small' });
+          },
+        },
+      });
+    }
+
+    // Load YouTube IFrame API (guard against double-load across navigations)
+    if (window.YT && window.YT.Player) {
+      initPlayer();
+    } else {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = function () { if (prev) prev(); initPlayer(); };
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const s = document.createElement('script');
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      if (!player || !playerReady) return;
+      if (isPlaying) player.pauseVideo();
+      else player.playVideo();
+    });
+
+    // Expose for edit mode to update URL
+    window._musicPlayer = { btn, updateUrl(vid, list) {
+      localStorage.setItem('music-vid', vid);
+      localStorage.setItem('music-list', list);
+      if (player && playerReady) {
+        player.loadPlaylist({ list, listType: 'playlist', index: 0, startSeconds: 0 });
+        player.playVideo();
+      }
+    }};
+  })();
+
   // --- Edit mode ---
   // Activate: visit any page with ?edit=YOUR_KEY in the URL
   // e.g. internet-journal.html?edit=faux2025
@@ -793,10 +883,27 @@
     bar.id = 'edit-bar';
     bar.innerHTML = `
       <span class="edit-label">Edit Mode</span>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:8px;">
+        <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;">Music URL</span>
+        <input id="edit-music-url" placeholder="YouTube URL or video ID"
+          style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:260px;"
+          value="${localStorage.getItem('music-vid') ? 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') : ''}">
+        <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
+      </div>
       <button id="edit-copy">Copy HTML</button>
       <button id="edit-close">Exit</button>
     `;
     document.body.appendChild(bar);
+
+    // Music URL update
+    document.getElementById('edit-music-save').addEventListener('click', () => {
+      const raw = document.getElementById('edit-music-url').value.trim();
+      const vidMatch  = raw.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+      const listMatch = raw.match(/[?&]list=([^&\s]+)/);
+      const vid  = vidMatch  ? vidMatch[1]  : raw.replace(/\s/g,'');
+      const list = listMatch ? listMatch[1] : vid;
+      if (vid && window._musicPlayer) window._musicPlayer.updateUrl(vid, list);
+    });
 
     // Copy HTML — strips all edit scaffolding
     document.getElementById('edit-copy').addEventListener('click', () => {
