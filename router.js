@@ -7,13 +7,15 @@
   function doSwap(html, href) {
     var doc = (new DOMParser()).parseFromString(html, 'text/html');
 
-    // Snapshot persistent elements before wiping
+    // Park persistent elements on <html> — they stay IN the live document so the
+    // YouTube iframe is never detached (detaching it would unload the player).
     var saved = KEEP_IDS.map(function (id) { return document.getElementById(id); }).filter(Boolean);
+    saved.forEach(function (el) { document.documentElement.appendChild(el); });
 
-    // Destroy page.js Lenis before wipe so its RAF doesn't error on detached nodes
+    // Destroy page.js Lenis before wipe so its RAF loop doesn't error on detached nodes
     if (window._destroyPageLenis) window._destroyPageLenis();
 
-    // Swap body
+    // Replace body content
     document.body.innerHTML = doc.body.innerHTML;
 
     // Mirror body attributes (data-accent, class, etc.)
@@ -25,8 +27,8 @@
     var accent = doc.body.dataset.accent;
     if (accent) document.documentElement.style.setProperty('--accent', accent);
 
-    // Re-attach persistent elements
-    saved.forEach(function (el) { if (el) document.body.appendChild(el); });
+    // Return persistent elements from <html> parking back to body
+    saved.forEach(function (el) { document.body.appendChild(el); });
 
     // Push new URL + title
     document.title = doc.title;
