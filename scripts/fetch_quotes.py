@@ -15,22 +15,40 @@ QUOTES_FILE  = os.path.join(os.path.dirname(__file__), "..", "quotes.json")
 # ── Fetch posts ──────────────────────────────────────────────────────────────
 
 def fetch_posts():
-    """Fetch up to 100 recent media items via the Instagram Graph API."""
+    """Fetch all media items via the Instagram Business Graph API."""
+    # Step 1: get the Instagram Business Account ID linked to the token
     params = urllib.parse.urlencode({
-        "fields": "caption",
-        "limit":  100,
+        "fields": "instagram_business_account",
         "access_token": ACCESS_TOKEN,
     })
-    url = f"https://graph.instagram.com/me/media?{params}"
+    url = f"https://graph.facebook.com/v21.0/me/accounts?{params}"
     with urllib.request.urlopen(url) as resp:
-        data = json.loads(resp.read())
-    posts = data.get("data", [])
+        pages = json.loads(resp.read()).get("data", [])
 
-    # Follow pagination to get all posts
-    while "paging" in data and "next" in data["paging"]:
-        with urllib.request.urlopen(data["paging"]["next"]) as resp:
+    ig_id = None
+    for page in pages:
+        ig = page.get("instagram_business_account", {})
+        if ig.get("id"):
+            ig_id = ig["id"]
+            break
+
+    if not ig_id:
+        raise RuntimeError("No Instagram Business Account found on this token.")
+
+    # Step 2: fetch media from that account
+    posts = []
+    params = urllib.parse.urlencode({
+        "fields": "caption",
+        "limit": 100,
+        "access_token": ACCESS_TOKEN,
+    })
+    url = f"https://graph.facebook.com/v21.0/{ig_id}/media?{params}"
+
+    while url:
+        with urllib.request.urlopen(url) as resp:
             data = json.loads(resp.read())
         posts.extend(data.get("data", []))
+        url = data.get("paging", {}).get("next")
 
     return posts
 
