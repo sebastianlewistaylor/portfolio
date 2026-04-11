@@ -1298,6 +1298,8 @@
     smoothTouch: false
   });
 
+  window._destroyIndexLenis = function () { lenis.destroy(); delete window._destroyIndexLenis; };
+
   function raf(time) {
     lenis.raf(time);
     requestAnimationFrame(raf);
