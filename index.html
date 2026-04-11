@@ -1014,6 +1014,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="router.js"></script>
 <script>
   // ── Corner arrows (shared by exit and entry) ──
   // ── Shared splash helpers ──
@@ -1096,7 +1097,13 @@
       c._dx = dx-size/2; c._dy = dy-size/2;
     });
 
-    const tl = gsap.timeline({ onComplete() { window.location.href = href; } });
+    // Start fetching in parallel with the exit animation
+    var _fetchPromise = fetch(href).then(function(r) { return r.text(); });
+
+    const tl = gsap.timeline({ onComplete() {
+      if (window._spaNav) window._spaNav(href, _fetchPromise);
+      else window.location.href = href;
+    }});
     tl.to(fills,   { scale:1, duration:0.18, stagger:0.015, ease:'power3.inOut' })
       .to(circles, { x:(i)=>circles[i]._dx, y:(i)=>circles[i]._dy, scale:1, duration:0.22, stagger:0.02, ease:'power3.out' }, '-=0.04');
   }
@@ -1133,6 +1140,14 @@
 
   // ── Splash ──
   (function () {
+    // Skip intro splash when arriving via SPA navigation (pt-entry animation plays instead)
+    if (sessionStorage.getItem('spa-arriving')) {
+      sessionStorage.removeItem('spa-arriving');
+      var s = document.getElementById('splash');
+      if (s) s.remove();
+      document.body.style.overflow = '';
+      return;
+    }
     const splash  = document.getElementById('splash');
     const lines   = splash.querySelectorAll('.splash-line');
     const fills   = splash.querySelectorAll('.splash-fill');

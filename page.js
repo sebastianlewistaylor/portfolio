@@ -3,28 +3,21 @@
 // Reads next-link color from #next-link[data-color]
 
 (function () {
-  const accent = document.body.dataset.accent || '#c8c2f5';
 
-  // --- Cursor ---
-  const cursor = document.getElementById('cursor');
-  const follower = document.getElementById('cursorFollower');
-  let mx = window.innerWidth / 2, my = window.innerHeight / 2, fx = mx, fy = my;
+  // ── One-time cursor setup (persists across SPA navigations) ───────────────
+  var cursor   = document.getElementById('cursor');
+  var follower = document.getElementById('cursorFollower');
+  var mx = window.innerWidth / 2, my = window.innerHeight / 2, fx = mx, fy = my;
 
-  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
-  document.querySelectorAll('a,button').forEach(el => {
-    el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
-    el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
-  });
+  document.addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; });
+
   (function tick() {
-    cursor.style.left = mx + 'px';
-    cursor.style.top = my + 'px';
-    fx += (mx - fx) * 0.08;
-    fy += (my - fy) * 0.08;
-    gsap.set(follower, { x: fx - 40, y: fy - 40 });
+    if (cursor)   { cursor.style.left = mx + 'px'; cursor.style.top = my + 'px'; }
+    if (follower) { fx += (mx - fx) * 0.08; fy += (my - fy) * 0.08; gsap.set(follower, { x: fx - 40, y: fy - 40 }); }
     requestAnimationFrame(tick);
   })();
 
-  // --- Page transition: corner arrows + gradient circle splash ---
+  // ── Transition helpers (defined once, used by nav() and reinitPage) ───────
 
   function ptRandomColor() {
     let r, g, b;
@@ -37,7 +30,7 @@
   }
 
   function buildSplashEl() {
-    const wrap = document.createElement('div');
+    const wrap    = document.createElement('div');
     wrap.style.cssText = 'position:fixed;inset:0;z-index:99998;pointer-events:none;overflow:hidden;background:transparent;';
     const fills   = Array.from({length:4}, () => { const f = document.createElement('div'); f.className = 'pt-fill';   wrap.appendChild(f); return f; });
     const circles = Array.from({length:4}, () => { const c = document.createElement('div'); c.className = 'pt-circle'; wrap.appendChild(c); return c; });
@@ -86,7 +79,7 @@
     'polygon(50% 50%,100% 50%,100% 100%,50% 100%)',
   ];
 
-  // Exit: arrows converge + circle splash covers screen → navigate
+  // Exit animation → fetch new page → swap (music keeps playing)
   function nav(href, color) {
     const W = window.innerWidth, H = window.innerHeight;
     const cx = W / 2, cy = H / 2;
@@ -120,263 +113,260 @@
       c._dx = dx - size/2; c._dy = dy - size/2;
     });
 
-    const tl = gsap.timeline({ onComplete() { window.location.href = href; } });
+    // Start fetching immediately — runs in parallel with the exit animation
+    var fetchPromise = fetch(href).then(function (r) { return r.text(); });
+
+    const tl = gsap.timeline({ onComplete() {
+      if (window._spaNav) window._spaNav(href, fetchPromise);
+      else window.location.href = href; // fallback if router not loaded
+    }});
     tl.to(fills,   { scale:1, duration:0.18, stagger:0.015, ease:'power3.inOut' })
       .to(circles, { x:(i)=>circles[i]._dx, y:(i)=>circles[i]._dy, scale:1, duration:0.22, stagger:0.02, ease:'power3.out' }, '-=0.04');
   }
 
-  // Entry: splash starts fully covered → arrows fly outward + blur/fade reveal
-  (function entryReveal() {
-    const stored = sessionStorage.getItem('pt-colors');
-    if (!stored) return;
-    const colors = JSON.parse(stored);
+  // ── Lenis instance — shared between reinitPage calls ─────────────────────
+  var lenis = null;
+  var lenisRafStarted = false;
 
-    const W = window.innerWidth, H = window.innerHeight;
-    const cx = W / 2, cy = H / 2;
-    const size = Math.max(W, H) * 1.3;
-    const quadrants = [
-      {x: W*0.25, y: H*0.25}, {x: W*0.75, y: H*0.25},
-      {x: W*0.25, y: H*0.75}, {x: W*0.75, y: H*0.75},
-    ];
+  window._destroyPageLenis = function () {
+    if (lenis) { lenis.destroy(); lenis = null; }
+  };
 
-    const { wrap, fills, circles } = buildSplashEl();
-    wrap.style.pointerEvents = 'all';
+  // ── Per-page init (re-called after every SPA navigation) ─────────────────
+  function reinitPage() {
+    // Destroy previous Lenis before creating new one
+    if (lenis) { lenis.destroy(); lenis = null; }
 
-    fills.forEach((f, i) => {
-      f.style.cssText = 'position:absolute;inset:0;background:#fff;transform-origin:50% 50%;';
-      f.style.clipPath = CLIP_PATHS[i];
-      gsap.set(f, { scale: 1 });
-    });
+    var accent = document.body.dataset.accent || '#c8c2f5';
 
-    circles.forEach((c, i) => {
-      const col = colors[i] || ptRandomColor();
-      const dx = quadrants[i].x + (Math.random()-0.5)*50;
-      const dy = quadrants[i].y + (Math.random()-0.5)*50;
-      c.style.cssText = 'position:absolute;border-radius:50%;mix-blend-mode:multiply;';
-      c.style.background = `radial-gradient(circle at center,${col} 0%,${col}dd 35%,${col}66 60%,transparent 80%)`;
-      gsap.set(c, { width:size, height:size, x:dx-size/2, y:dy-size/2, scale:1 });
-    });
+    // ── Entry reveal (runs when arriving via a page transition) ──────────
+    (function entryReveal() {
+      const stored = sessionStorage.getItem('pt-colors');
+      if (!stored) return;
+      sessionStorage.removeItem('pt-colors'); // consume so it doesn't replay on next reinit
 
-    spawnCornerArrows(colors[0], true);
-
-    const tl = gsap.timeline({ onComplete() { wrap.remove(); wrap.style.pointerEvents = 'none'; } });
-    tl.to(wrap, { filter:'blur(28px)', duration:0.3, ease:'power2.inOut' })
-      .to(wrap, { opacity:0, duration:0.45, ease:'power2.inOut' }, '+=0.02');
-  })();
-
-  // Back to index
-  ['back-link', 'back-link2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', e => { e.preventDefault(); nav('index.html', accent); });
-  });
-
-  // Next project
-  const nextLink = document.getElementById('next-link');
-  if (nextLink) {
-    nextLink.addEventListener('click', e => {
-      e.preventDefault();
-      nav(nextLink.getAttribute('href'), nextLink.dataset.color || accent);
-    });
-  }
-
-  // --- Lenis smooth scroll ---
-  const lenis = new Lenis({ lerp: 0.08 });
-  (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
-
-  // --- Hero scroll: cover → contain (full image visible), sticky ---
-  // Hero stays 100vh. Image interpolates from cover scale → contain scale using
-  // explicit width/height — so the full image is visible at scroll progress = 1.
-  // Wrapper is 200vh: hero un-sticks exactly when animation reaches progress = 1.
-  const heroEl  = document.querySelector('.p-hero');
-  const heroImg = document.querySelector('.p-hero img');
-
-  if (heroEl && heroImg) {
-    let currentProgress = 0;
-
-    // Hero sits below the nav bar — measure nav height with fallback
-    const heroNavH = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
-    const heroFrameH = window.innerHeight - heroNavH;
-
-    // Sticky wrapper (200vh = one viewport of scroll budget)
-    const heroWrapper = document.createElement('div');
-    heroWrapper.className = 'p-hero-wrapper';
-    heroWrapper.style.cssText = 'position:relative; height:200vh;';
-    heroEl.parentNode.insertBefore(heroWrapper, heroEl);
-    heroWrapper.appendChild(heroEl);
-    heroEl.style.cssText = `position:sticky; top:${heroNavH}px; height:${heroFrameH}px; overflow:hidden;`;
-
-    // Override CSS object-fit:cover — 'fill' lets the element dimensions we set drive rendering
-    heroImg.style.objectFit = 'fill';
-    heroImg.style.objectPosition = '';
-
-    // Title badge — text pulled from existing page elements
-    const heroBadge = document.createElement('div');
-    heroBadge.className = 'p-hero-badge';
-    const _title = document.querySelector('.p-title');
-    const _sub   = document.querySelector('.p-subtitle');
-    heroBadge.innerHTML =
-      (_title ? `<div class="p-hero-badge-title">${_title.textContent.trim()}</div>` : '') +
-      (_sub   ? `<div class="p-hero-badge-sub">${_sub.textContent.trim()}</div>`   : '');
-    heroEl.appendChild(heroBadge);
-
-    function focalToXY(str) {
-      const parts = (str || 'center center').split(' ');
-      const m = { left: 0, center: 0.5, right: 1, top: 0, bottom: 1 };
-      return [
-        m[parts[0]] !== undefined ? m[parts[0]] : 0.5,
-        m[parts[1]] !== undefined ? m[parts[1]] : 0.5,
+      const colors = JSON.parse(stored);
+      const W = window.innerWidth, H = window.innerHeight;
+      const cx = W / 2, cy = H / 2;
+      const size = Math.max(W, H) * 1.3;
+      const quadrants = [
+        {x: W*0.25, y: H*0.25}, {x: W*0.75, y: H*0.25},
+        {x: W*0.25, y: H*0.75}, {x: W*0.75, y: H*0.75},
       ];
-    }
 
-    function applyEffect(progress) {
-      currentProgress = Math.min(1, Math.max(0, progress));
-      if (!heroImg.naturalWidth) return;
+      const { wrap, fills, circles } = buildSplashEl();
+      wrap.style.pointerEvents = 'all';
 
-      const iw = heroImg.naturalWidth;
-      const ih = heroImg.naturalHeight;
-      const cw = heroEl.offsetWidth;
-      const ch = heroFrameH;
-
-      // cover: image fills entire 100vh container (cropped)
-      // contain: full image fits within 100vh container (background visible around it)
-      const coverScale   = Math.max(cw / iw, ch / ih);
-      const containScale = Math.min(cw / iw, ch / ih);
-      const baseZoom     = parseFloat(heroImg.dataset.zoom || '1');
-      const startScale   = coverScale * baseZoom;
-      const scale        = startScale + (containScale - startScale) * currentProgress;
-
-      const w = Math.round(iw * scale);
-      const h = Math.round(ih * scale);
-
-      const [fx, fy] = focalToXY(heroImg.dataset.focal || 'center top');
-      let x = fx * cw - fx * w;
-      let y = fy * ch - fy * h;
-      // when image overflows container, clamp to edges; when smaller, center/focal within
-      if (w >= cw) x = Math.min(0, Math.max(cw - w, x));
-      else         x = Math.min(cw - w, Math.max(0, x));
-      if (h >= ch) y = Math.min(0, Math.max(ch - h, y));
-      else         y = Math.min(ch - h, Math.max(0, y));
-
-      heroImg.style.width     = w + 'px';
-      heroImg.style.height    = h + 'px';
-      heroImg.style.left      = x + 'px';
-      heroImg.style.top       = y + 'px';
-      heroImg.style.transform = '';
-
-      // Badge fades out over first ~40% of scroll
-      heroBadge.style.opacity = Math.max(0, 1 - currentProgress * 2.5);
-    }
-
-    if (heroImg.complete && heroImg.naturalWidth) applyEffect(0);
-    heroImg.addEventListener('load', () => applyEffect(currentProgress));
-    window.addEventListener('resize', () => applyEffect(currentProgress), { passive: true });
-
-    lenis.on('scroll', ({ scroll }) => {
-      applyEffect(scroll / window.innerHeight);
-    });
-
-    // Expose for edit mode
-    heroEl._applyEffect = applyEffect;
-    heroEl._getProgress = () => currentProgress;
-  }
-
-  // --- Tall image scroll reveal (cover → contain, same mechanic as hero) ---
-  // Portrait / tall images get a 200vh wrapper + sticky 100vh frame.
-  // Image scales from cover (fills frame, cropped) → contain (full image visible).
-  // Exactly mirrors the hero effect — one viewport height of scrolling = full reveal.
-  (function () {
-    const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
-    const SPAN_CLASSES  = ['wide', 'span-2'];
-
-    function setupTallImg(img) {
-      if (img.dataset.tallSetup) return;
-      if (!img.naturalWidth || !img.naturalHeight) return;
-      if (RATIO_CLASSES.some(c => img.classList.contains(c))) return;
-
-      const displayW = img.offsetWidth;
-      if (!displayW) return;
-
-      const vh              = window.innerHeight;
-      const naturalDisplayH = displayW * img.naturalHeight / img.naturalWidth;
-      if (naturalDisplayH <= vh) return; // fits in viewport — no effect needed
-
-      img.dataset.tallSetup = '1';
-
-      // Sticky frame sits permanently below the nav bar
-      const navH = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
-      const frameH = vh - navH;
-
-      // 200vh outer = exactly 1×vh of sticky scroll budget (same as hero wrapper)
-      const outer = document.createElement('div');
-      outer.style.cssText = `height:${2 * vh}px; position:relative;`;
-      SPAN_CLASSES.forEach(cls => {
-        if (img.classList.contains(cls)) { outer.classList.add(cls); img.classList.remove(cls); }
+      fills.forEach((f, i) => {
+        f.style.cssText = 'position:absolute;inset:0;background:#fff;transform-origin:50% 50%;';
+        f.style.clipPath = CLIP_PATHS[i];
+        gsap.set(f, { scale: 1 });
       });
 
-      // Sticky frame below the nav — overflow:hidden clips the cover-scale image
-      const inner = document.createElement('div');
-      inner.style.cssText = `height:${frameH}px; overflow:hidden; position:sticky; top:${navH}px; background:var(--bg);`;
+      circles.forEach((c, i) => {
+        const col = colors[i] || ptRandomColor();
+        const dx = quadrants[i].x + (Math.random()-0.5)*50;
+        const dy = quadrants[i].y + (Math.random()-0.5)*50;
+        c.style.cssText = 'position:absolute;border-radius:50%;mix-blend-mode:multiply;';
+        c.style.background = `radial-gradient(circle at center,${col} 0%,${col}dd 35%,${col}66 60%,transparent 80%)`;
+        gsap.set(c, { width:size, height:size, x:dx-size/2, y:dy-size/2, scale:1 });
+      });
 
-      img.parentNode.insertBefore(outer, img);
-      outer.appendChild(inner);
-      inner.appendChild(img);
+      spawnCornerArrows(colors[0], true);
 
-      img.style.position   = 'absolute';
-      img.style.objectFit  = 'fill';
-      img.style.objectPosition = '';
-      img.style.transform  = '';
+      const tl = gsap.timeline({ onComplete() { wrap.remove(); wrap.style.pointerEvents = 'none'; } });
+      tl.to(wrap, { filter:'blur(28px)', duration:0.3, ease:'power2.inOut' })
+        .to(wrap, { opacity:0, duration:0.45, ease:'power2.inOut' }, '+=0.02');
+    })();
 
-      function apply(progress) {
-        const p  = Math.min(1, Math.max(0, progress));
-        const iw = img.naturalWidth;
-        const ih = img.naturalHeight;
-        const cw = inner.offsetWidth;
-        const ch = frameH;
+    // ── Lenis smooth scroll ───────────────────────────────────────────────
+    lenis = new Lenis({ lerp: 0.08 });
+    if (!lenisRafStarted) {
+      lenisRafStarted = true;
+      (function raf(t) { if (lenis) lenis.raf(t); requestAnimationFrame(raf); })(0);
+    }
+
+    // ── Navigation link wiring ────────────────────────────────────────────
+    ['back-link', 'back-link2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', e => { e.preventDefault(); nav('index.html', accent); });
+    });
+
+    const nextLink = document.getElementById('next-link');
+    if (nextLink) {
+      nextLink.addEventListener('click', e => {
+        e.preventDefault();
+        nav(nextLink.getAttribute('href'), nextLink.dataset.color || accent);
+      });
+    }
+
+    // ── Hero scroll: cover → contain, sticky below nav ───────────────────
+    const heroEl  = document.querySelector('.p-hero');
+    const heroImg = document.querySelector('.p-hero img');
+
+    if (heroEl && heroImg) {
+      let currentProgress = 0;
+
+      const heroNavH  = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
+      const heroFrameH = window.innerHeight - heroNavH;
+
+      const heroWrapper = document.createElement('div');
+      heroWrapper.className = 'p-hero-wrapper';
+      heroWrapper.style.cssText = 'position:relative; height:200vh;';
+      heroEl.parentNode.insertBefore(heroWrapper, heroEl);
+      heroWrapper.appendChild(heroEl);
+      heroEl.style.cssText = `position:sticky; top:${heroNavH}px; height:${heroFrameH}px; overflow:hidden;`;
+
+      heroImg.style.objectFit = 'fill';
+      heroImg.style.objectPosition = '';
+
+      const heroBadge = document.createElement('div');
+      heroBadge.className = 'p-hero-badge';
+      const _title = document.querySelector('.p-title');
+      const _sub   = document.querySelector('.p-subtitle');
+      heroBadge.innerHTML =
+        (_title ? `<div class="p-hero-badge-title">${_title.textContent.trim()}</div>` : '') +
+        (_sub   ? `<div class="p-hero-badge-sub">${_sub.textContent.trim()}</div>`   : '');
+      heroEl.appendChild(heroBadge);
+
+      function focalToXY(str) {
+        const parts = (str || 'center center').split(' ');
+        const m = { left: 0, center: 0.5, right: 1, top: 0, bottom: 1 };
+        return [
+          m[parts[0]] !== undefined ? m[parts[0]] : 0.5,
+          m[parts[1]] !== undefined ? m[parts[1]] : 0.5,
+        ];
+      }
+
+      function applyEffect(progress) {
+        currentProgress = Math.min(1, Math.max(0, progress));
+        if (!heroImg.naturalWidth) return;
+
+        const iw = heroImg.naturalWidth;
+        const ih = heroImg.naturalHeight;
+        const cw = heroEl.offsetWidth;
+        const ch = heroFrameH;
 
         const coverScale   = Math.max(cw / iw, ch / ih);
         const containScale = Math.min(cw / iw, ch / ih);
-        const scale        = coverScale + (containScale - coverScale) * p;
+        const baseZoom     = parseFloat(heroImg.dataset.zoom || '1');
+        const startScale   = coverScale * baseZoom;
+        const scale        = startScale + (containScale - startScale) * currentProgress;
 
         const w = Math.round(iw * scale);
         const h = Math.round(ih * scale);
 
-        img.style.width  = w + 'px';
-        img.style.height = h + 'px';
-        img.style.left   = Math.round((cw - w) / 2) + 'px';
-        img.style.top    = Math.max(0, Math.round((ch - h) / 2)) + 'px';
-        img.style.transform = '';
+        const [fx, fy] = focalToXY(heroImg.dataset.focal || 'center top');
+        let x = fx * cw - fx * w;
+        let y = fy * ch - fy * h;
+        if (w >= cw) x = Math.min(0, Math.max(cw - w, x));
+        else         x = Math.min(cw - w, Math.max(0, x));
+        if (h >= ch) y = Math.min(0, Math.max(ch - h, y));
+        else         y = Math.min(ch - h, Math.max(0, y));
+
+        heroImg.style.width     = w + 'px';
+        heroImg.style.height    = h + 'px';
+        heroImg.style.left      = x + 'px';
+        heroImg.style.top       = y + 'px';
+        heroImg.style.transform = '';
+
+        heroBadge.style.opacity = Math.max(0, 1 - currentProgress * 2.5);
       }
 
-      apply(0);
+      if (heroImg.complete && heroImg.naturalWidth) applyEffect(0);
+      heroImg.addEventListener('load', () => applyEffect(currentProgress));
+      window.addEventListener('resize', () => applyEffect(currentProgress), { passive: true });
 
-      // Progress derived live from DOM position — no pre-captured reference needed.
-      // When outer's top is at 0 (entering viewport) → p=0 (cover).
-      // When outer's top is at -vh (scrolled one viewport) → p=1 (contain).
-      lenis.on('scroll', () => {
-        apply(-outer.getBoundingClientRect().top / vh);
-      });
+      lenis.on('scroll', ({ scroll }) => { applyEffect(scroll / window.innerHeight); });
+
+      heroEl._applyEffect = applyEffect;
+      heroEl._getProgress = () => currentProgress;
     }
 
-    document.querySelectorAll('.p-images img').forEach(img => {
-      img.addEventListener('load', () => setupTallImg(img));
-      if (img.complete && img.naturalWidth) setupTallImg(img);
-    });
-  })();
+    // ── Tall image scroll reveal ──────────────────────────────────────────
+    (function () {
+      const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
+      const SPAN_CLASSES  = ['wide', 'span-2'];
 
-  // --- Edit mode ---
-  // Activate: visit any page with ?edit=YOUR_KEY in the URL
-  // e.g. internet-journal.html?edit=faux2025
-  // Change EDIT_KEY to whatever you want
-  const EDIT_KEY = 'faux2025';
+      function setupTallImg(img) {
+        if (img.dataset.tallSetup) return;
+        if (!img.naturalWidth || !img.naturalHeight) return;
+        if (RATIO_CLASSES.some(c => img.classList.contains(c))) return;
 
-  if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
-    activateEditMode(accent);
+        const displayW = img.offsetWidth;
+        if (!displayW) return;
+
+        const vh              = window.innerHeight;
+        const naturalDisplayH = displayW * img.naturalHeight / img.naturalWidth;
+        if (naturalDisplayH <= vh) return;
+
+        img.dataset.tallSetup = '1';
+
+        const navH  = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
+        const frameH = vh - navH;
+
+        const outer = document.createElement('div');
+        outer.style.cssText = `height:${2 * vh}px; position:relative;`;
+        SPAN_CLASSES.forEach(cls => {
+          if (img.classList.contains(cls)) { outer.classList.add(cls); img.classList.remove(cls); }
+        });
+
+        const inner = document.createElement('div');
+        inner.style.cssText = `height:${frameH}px; overflow:hidden; position:sticky; top:${navH}px; background:var(--bg);`;
+
+        img.parentNode.insertBefore(outer, img);
+        outer.appendChild(inner);
+        inner.appendChild(img);
+
+        img.style.position       = 'absolute';
+        img.style.objectFit      = 'fill';
+        img.style.objectPosition = '';
+        img.style.transform      = '';
+
+        function apply(progress) {
+          const p  = Math.min(1, Math.max(0, progress));
+          const iw = img.naturalWidth;
+          const ih = img.naturalHeight;
+          const cw = inner.offsetWidth;
+          const ch = frameH;
+
+          const coverScale   = Math.max(cw / iw, ch / ih);
+          const containScale = Math.min(cw / iw, ch / ih);
+          const scale        = coverScale + (containScale - coverScale) * p;
+
+          const w = Math.round(iw * scale);
+          const h = Math.round(ih * scale);
+
+          img.style.width  = w + 'px';
+          img.style.height = h + 'px';
+          img.style.left   = Math.round((cw - w) / 2) + 'px';
+          img.style.top    = Math.max(0, Math.round((ch - h) / 2)) + 'px';
+          img.style.transform = '';
+        }
+
+        apply(0);
+
+        lenis.on('scroll', () => { apply(-outer.getBoundingClientRect().top / vh); });
+      }
+
+      document.querySelectorAll('.p-images img').forEach(img => {
+        img.addEventListener('load', () => setupTallImg(img));
+        if (img.complete && img.naturalWidth) setupTallImg(img);
+      });
+    })();
+
+    // ── Edit mode ─────────────────────────────────────────────────────────
+    if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
+      activateEditMode(accent);
+    }
   }
+
+  // ── Edit mode key & function (defined at outer scope, referenced in reinitPage) ───
+  const EDIT_KEY = 'faux2025';
 
   function activateEditMode(accent) {
     document.body.classList.add('edit-mode');
 
-    // --- Inject styles ---
     const style = document.createElement('style');
     style.id = 'edit-styles';
     style.textContent = `
@@ -397,7 +387,6 @@
         outline-color: rgba(200,194,245,0.9);
       }
 
-      /* Layout bar above each .p-images block */
       .edit-layout-bar {
         display: flex; align-items: center; gap: 6px;
         padding: 8px 0 6px;
@@ -416,7 +405,6 @@
       .edit-layout-bar button:hover { color: #f0ede8; border-color: rgba(240,237,232,0.3); }
       .edit-layout-bar button.active { border-color: ${accent}; color: ${accent}; }
 
-      /* Image panel */
       #edit-img-panel {
         position: fixed; z-index: 999998;
         background: #0c0c0c; border: 1px solid rgba(200,194,245,0.25);
@@ -448,7 +436,6 @@
       .eip-btns button.active { border-color: ${accent}; color: ${accent}; }
       #eip-apply { border-color: rgba(200,194,245,0.4); color: ${accent}; }
 
-      /* BG color swatches */
       .eip-swatches { display: flex; gap: 4px; align-items: center; }
       .eip-swatches button {
         width: 20px; height: 20px; padding: 0;
@@ -463,7 +450,6 @@
         flex-shrink: 0;
       }
 
-      /* Zoom slider */
       .eip-zoom { display: flex; align-items: center; gap: 8px; flex: 1; }
       #eip-zoom {
         flex: 1; -webkit-appearance: none; appearance: none;
@@ -479,7 +465,6 @@
         text-align: right; font-family: monospace;
       }
 
-      /* Focal point grid */
       .eip-focal {
         display: grid; grid-template-columns: repeat(3, 24px);
         grid-template-rows: repeat(3, 24px); gap: 3px;
@@ -500,7 +485,6 @@
       .eip-focal button.active { border-color: ${accent}; }
       .eip-focal button.active::after { background: ${accent}; }
 
-      /* Main edit bar */
       #edit-bar {
         position: fixed; bottom: 28px; right: 28px; z-index: 999999;
         display: flex; align-items: center; gap: 10px;
@@ -523,7 +507,6 @@
     `;
     document.head.appendChild(style);
 
-    // --- Text editing ---
     const TEXT = [
       '.p-title', '.p-subtitle', '.p-body',
       '.p-meta-value', '.p-section-label',
@@ -540,7 +523,6 @@
       });
     });
 
-    // --- Layout bars above each .p-images block ---
     const LAYOUTS = [
       { label: 'Stack', cls: '' },
       { label: '2×',    cls: 'grid-2' },
@@ -572,8 +554,10 @@
       });
     });
 
-    // --- Image panel ---
     let imgPanel = null;
+
+    const heroEl  = document.querySelector('.p-hero');
+    const heroImg = document.querySelector('.p-hero img');
 
     const RATIOS = [
       { label: 'Natural', cls: '' },
@@ -591,15 +575,14 @@
     function openImgPanel(img) {
       if (imgPanel) imgPanel.remove();
 
-      const rect = img.getBoundingClientRect();
-      imgPanel = document.createElement('div');
-      imgPanel.id = 'edit-img-panel';
+      const rect        = img.getBoundingClientRect();
+      imgPanel          = document.createElement('div');
+      imgPanel.id       = 'edit-img-panel';
 
       const activeRatio = RATIOS.find(r => r.cls && img.classList.contains(r.cls))?.cls || '';
       const activeSpan  = SPANS.find(s => s.cls && img.classList.contains(s.cls))?.cls || '';
-      const isHero = !!img.closest('.p-hero');
+      const isHero      = !!img.closest('.p-hero');
 
-      // Focal point positions (row-major, top→bottom left→right)
       const FOCAL_POS = [
         'left top',    'center top',    'right top',
         'left center', 'center center', 'right center',
@@ -608,7 +591,6 @@
       const currentPos  = isHero ? (heroImg.dataset.focal || 'center center') : (img.style.objectPosition || 'center center');
       const currentZoom = parseFloat(img.dataset.zoom || '1');
       const currentFit  = img.style.objectFit || 'cover';
-      // For hero, BG lives on the container; for gallery images, on the img itself
       const bgTarget    = isHero ? heroEl : img;
       const currentBg   = bgTarget ? (bgTarget.style.backgroundColor || '#0c0c0c') : '#0c0c0c';
       const isContain   = currentFit === 'contain';
@@ -676,13 +658,11 @@
         </div>` : ''}
       `;
 
-      // Position: below the image, clamped to viewport
-      const top = Math.min(rect.bottom + 10, window.innerHeight - 160);
+      const top  = Math.min(rect.bottom + 10, window.innerHeight - 160);
       const left = Math.max(10, Math.min(rect.left, window.innerWidth - 340));
       Object.assign(imgPanel.style, { top: top + 'px', left: left + 'px' });
       document.body.appendChild(imgPanel);
 
-      // URL apply
       document.getElementById('eip-apply').addEventListener('click', () => {
         const url = document.getElementById('eip-url').value.trim();
         if (url) img.src = url;
@@ -691,9 +671,8 @@
         if (e.key === 'Enter') document.getElementById('eip-apply').click();
       });
 
-      // Zoom slider — stores in data-zoom so the scroll effect can read it
       const zoomSlider = document.getElementById('eip-zoom');
-      const zoomVal = document.getElementById('eip-zoom-val');
+      const zoomVal    = document.getElementById('eip-zoom-val');
       zoomSlider.addEventListener('input', () => {
         const v = parseFloat(zoomSlider.value);
         if (v === 1) delete img.dataset.zoom;
@@ -703,7 +682,6 @@
         else img.style.transform = `scale(${v})`;
       });
 
-      // Fit buttons (hero: always cover in terms of object-fit, scroll handles contain effect)
       imgPanel.querySelectorAll('[data-fit]').forEach(btn => {
         btn.addEventListener('click', () => {
           const fit = btn.dataset.fit;
@@ -716,7 +694,6 @@
         });
       });
 
-      // BG swatches — hero BG goes on the container, gallery BG on the img
       function applyBg(color) {
         if (bgTarget) bgTarget.style.backgroundColor = color;
         document.getElementById('eip-bg-custom').value = color;
@@ -733,7 +710,6 @@
         imgPanel.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
       });
 
-      // Focal point buttons
       imgPanel.querySelectorAll('[data-pos]').forEach(btn => {
         btn.addEventListener('click', () => {
           if (isHero) {
@@ -747,7 +723,6 @@
         });
       });
 
-      // Ratio buttons
       imgPanel.querySelectorAll('[data-ratio]').forEach(btn => {
         btn.addEventListener('click', () => {
           img.classList.remove(...RATIOS.map(r => r.cls).filter(Boolean));
@@ -757,7 +732,6 @@
         });
       });
 
-      // Span buttons
       imgPanel.querySelectorAll('[data-span]').forEach(btn => {
         btn.addEventListener('click', () => {
           img.classList.remove(...SPANS.map(s => s.cls).filter(Boolean));
@@ -777,7 +751,6 @@
       }, true);
     });
 
-    // Close image panel on outside click / Escape
     document.addEventListener('click', e => {
       if (imgPanel && !imgPanel.contains(e.target) && e.target.dataset.editTarget !== 'image') {
         imgPanel.remove();
@@ -788,7 +761,6 @@
       if (e.key === 'Escape' && imgPanel) { imgPanel.remove(); imgPanel = null; }
     });
 
-    // --- Main edit bar ---
     const bar = document.createElement('div');
     bar.id = 'edit-bar';
     bar.innerHTML = `
@@ -805,7 +777,6 @@
     `;
     document.body.appendChild(bar);
 
-    // Music URL update
     document.getElementById('edit-music-save').addEventListener('click', () => {
       const raw = document.getElementById('edit-music-url').value.trim();
       const vidMatch  = raw.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
@@ -815,7 +786,6 @@
       if (vid && window._musicPlayer) window._musicPlayer.updateUrl(vid, list);
     });
 
-    // Copy HTML — strips all edit scaffolding
     document.getElementById('edit-copy').addEventListener('click', () => {
       if (imgPanel) { imgPanel.remove(); imgPanel = null; }
 
@@ -829,14 +799,11 @@
         el.removeAttribute('data-edit-target');
       });
       clone.querySelectorAll('.edit-layout-bar').forEach(el => el.remove());
-      // Strip JS-injected hero wrapper (unwrap back to original structure)
       clone.querySelectorAll('.p-hero-wrapper').forEach(wrapper => {
         const hero = wrapper.querySelector('.p-hero');
         if (hero) { hero.style.position = ''; hero.style.top = ''; hero.style.height = ''; wrapper.replaceWith(hero); }
       });
-      // Strip dynamically-generated hero badge (rebuilt from page text on each load)
       clone.querySelectorAll('.p-hero-badge').forEach(el => el.remove());
-      // Reset hero image inline styles (JS-driven, will re-apply on load)
       const cloneHeroImg = clone.querySelector('.p-hero img');
       if (cloneHeroImg) { ['width','height','left','top','transform','objectFit','objectPosition'].forEach(p => cloneHeroImg.style[p] = ''); }
       ['edit-bar', 'edit-styles', 'edit-img-panel'].forEach(id => {
@@ -858,11 +825,15 @@
         });
     });
 
-    // Exit
     document.getElementById('edit-close').addEventListener('click', () => {
       const url = new URL(window.location.href);
       url.searchParams.delete('edit');
       window.location.href = url.toString();
     });
   }
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+  reinitPage();
+  window._reinitPage = reinitPage;
+
 })();

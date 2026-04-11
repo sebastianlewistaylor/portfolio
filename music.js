@@ -70,6 +70,7 @@
 
   // ── Hidden player container (off-screen but rendered for ToS) ──
   var wrap = document.createElement('div');
+  wrap.id = 'yt-music-wrap';
   wrap.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:113px;pointer-events:none;z-index:1;';
   var playerEl = document.createElement('div');
   playerEl.id = 'yt-music-player';
