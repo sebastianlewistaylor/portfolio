@@ -1997,24 +1997,15 @@
     // ── GitHub API push ───────────────────────────────────────────────────────
     async function ghPush(html, filename) {
       const REPO = 'sebastianlewistaylor/portfolio';
+      const ti = document.getElementById('edit-gh-token');
 
-      let token = localStorage.getItem('gh-edit-token');
+      const token = (ti ? ti.value.trim() : '') || localStorage.getItem('gh-edit-token') || '';
       if (!token) {
-        // prompt() is synchronous — guaranteed to appear, no z-index/async issues
-        const entered = prompt(
-          'GitHub Personal Access Token required.\n\n' +
-          'Create one at: github.com/settings/tokens\n' +
-          '→ Generate new token (classic) → check "repo" scope\n\n' +
-          'Token is saved in your browser for future saves.',
-          ''
-        );
-        if (!entered || !entered.trim()) {
-          saveBtn.textContent = 'Save'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
-          return;
-        }
-        token = entered.trim();
-        localStorage.setItem('gh-edit-token', token);
+        saveBtn.textContent = 'Save'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
+        if (ti) { ti.focus(); ti.style.borderColor = '#e05'; setTimeout(() => { ti.style.borderColor = ''; }, 2000); }
+        return;
       }
+      localStorage.setItem('gh-edit-token', token);
 
       saveBtn.textContent = 'Pushing…';
 
@@ -2025,8 +2016,8 @@
         const getRes = await fetch(apiUrl, { headers });
         if (getRes.status === 401) {
           localStorage.removeItem('gh-edit-token');
+          if (ti) { ti.value = ''; ti.style.borderColor = '#e05'; setTimeout(() => { ti.style.borderColor = ''; }, 2000); }
           saveBtn.textContent = 'Save'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
-          alert('Token invalid or expired. Press Save again to enter a new one.');
           return;
         }
         if (!getRes.ok) throw new Error('GitHub HTTP ' + getRes.status);
@@ -2138,7 +2129,16 @@
     const mutedPicker  = makeColorPicker('Muted',  '--muted');
     const accentPicker = makeColorPicker('Accent', '--accent');
 
-    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), saveBtn, copyBtn, exitBtn]
+    const tokenLbl = Object.assign(document.createElement('span'), { textContent: '🔑' });
+    tokenLbl.style.cssText = 'font-size:11px;';
+    const tokenInput = document.createElement('input');
+    tokenInput.id = 'edit-gh-token';
+    tokenInput.type = 'password';
+    tokenInput.placeholder = 'GitHub token (repo scope)';
+    tokenInput.style.width = '160px';
+    tokenInput.value = localStorage.getItem('gh-edit-token') || '';
+
+    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), tokenLbl, tokenInput, sep(), saveBtn, copyBtn, exitBtn]
       .forEach(el => bar.appendChild(el));
     document.body.appendChild(bar);
 
