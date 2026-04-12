@@ -127,7 +127,7 @@
             if (entry.isIntersecting) { entry.target.classList.add('in'); obs.unobserve(entry.target); }
           });
         }, { threshold: 0.15 });
-        document.querySelectorAll('.reveal-inner, .fade-up, .line-expand').forEach(function (el) {
+        document.querySelectorAll('.reveal-inner, .fade-up, .line-expand, .cursive-top').forEach(function (el) {
           obs.observe(el);
         });
       })();

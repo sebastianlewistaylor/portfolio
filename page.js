@@ -798,14 +798,10 @@
         const img = document.createElement('img');
         img.src = url; img.alt = ''; img.loading = 'lazy';
         img.dataset.editTarget = 'image';
-        img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
-        // Delete button wrapper
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'position:relative;display:contents;';
-        container.appendChild(img);
-        // Mark image so it can be right-click deleted
         img.title = 'Click: edit  |  Right-click: remove';
+        img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
         img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+        container.appendChild(img);
       });
       container.after(addBtn);
 

@@ -298,6 +298,24 @@
 
     .info-wrap { max-width: 680px; }
 
+    .cursive-top {
+      font-family: 'bickham-script-pro-3', Georgia, serif;
+      font-size: clamp(52px, 7.5vw, 110px);
+      font-weight: normal;
+      font-style: italic;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      color: var(--fg);
+      margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1);
+    }
+    .cursive-top.in {
+      opacity: 1;
+      transform: none;
+    }
+
     .info-tagline {
       font-size: 9px;
       letter-spacing: 0.14em;
@@ -760,6 +778,7 @@
   <!-- Info -->
   <section id="info" nav-section="info">
     <div class="info-wrap">
+      <div class="cursive-top">Sebastian Taylor</div>
       <div class="info-tagline fade-up">
         Designer &amp; Creative Practitioner — Novato, CA
       </div>
@@ -1156,7 +1175,7 @@
       // Pre-reveal all animated elements immediately — they animate in under the
       // pt-entry overlay so content is visible by the time the overlay fades.
       // Fixes black flash when ScrollTrigger hasn't loaded yet.
-      document.querySelectorAll('.reveal-inner, .fade-up, .line-expand').forEach(function (el) {
+      document.querySelectorAll('.reveal-inner, .fade-up, .line-expand, .cursive-top').forEach(function (el) {
         el.classList.add('in');
       });
       return;
@@ -1444,8 +1463,8 @@
     });
   }, { threshold: 0.15 });
 
-  // On load — animate visible elements
-  document.querySelectorAll('.reveal-inner, .fade-up, .line-expand').forEach(el => {
+  // On load — animate visible elements (including cursive-top)
+  document.querySelectorAll('.reveal-inner, .fade-up, .line-expand, .cursive-top').forEach(el => {
     observer.observe(el);
   });
 
@@ -1645,7 +1664,7 @@
 
     // ── Editable text fields ─────────────────────────────────────────────────
     [
-      '.info-tagline', '.info-h1 .reveal-inner', '.info-bio',
+      '.cursive-top', '.info-tagline', '.info-h1 .reveal-inner', '.info-bio',
       '.cap', '.scroll-hint', '.s-label > span',
       '.archive-title', '.archive-year',
       '.p-title', '.p-tag', '.p-year', '.p-num',
