@@ -11,9 +11,27 @@
 
   document.addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; });
 
+  var _tickActive = true;
+
+  // Called by router before navigating to index — stops tick so index physics takes over
+  window._disablePageCursor = function () {
+    _tickActive = false;
+    // Both systems use style.left/top — no GSAP to clear, elements hold position naturally.
+  };
+
+  // Called by reinitPage when arriving at a project page
+  window._enablePageCursor = function () {
+    _tickActive = true;
+    // Snap follower physics to current mouse so there's no jump on arrival
+    fx = mx; fy = my;
+  };
+
   (function tick() {
-    if (cursor)   { cursor.style.left = mx + 'px'; cursor.style.top = my + 'px'; }
-    if (follower) { fx += (mx - fx) * 0.08; fy += (my - fy) * 0.08; gsap.set(follower, { x: fx - 40, y: fy - 40 }); }
+    if (_tickActive) {
+      if (cursor)   { cursor.style.left = mx + 'px'; cursor.style.top = my + 'px'; }
+      if (follower) { fx += (mx - fx) * 0.08; fy += (my - fy) * 0.08;
+                      follower.style.left = (fx - 40) + 'px'; follower.style.top = (fy - 40) + 'px'; }
+    }
     requestAnimationFrame(tick);
   })();
 
@@ -134,6 +152,9 @@
 
   // ── Per-page init (re-called after every SPA navigation) ─────────────────
   function reinitPage() {
+    // Re-enable page cursor (router disables it before every swap)
+    window._enablePageCursor();
+
     // Destroy previous Lenis before creating new one
     if (lenis) { lenis.destroy(); lenis = null; }
 
@@ -306,6 +327,7 @@
         const frameH = vh - navH;
 
         const outer = document.createElement('div');
+        outer.className = 'tall-img-outer';
         outer.style.cssText = `height:${2 * vh}px; position:relative;`;
         SPAN_CLASSES.forEach(cls => {
           if (img.classList.contains(cls)) { outer.classList.add(cls); img.classList.remove(cls); }
@@ -357,6 +379,9 @@
 
     // ── Edit mode ─────────────────────────────────────────────────────────
     if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
+      sessionStorage.setItem('edit-mode', '1');
+    }
+    if (sessionStorage.getItem('edit-mode') === '1') {
       activateEditMode(accent);
     }
   }
@@ -509,7 +534,7 @@
 
     const TEXT = [
       '.p-title', '.p-subtitle', '.p-body',
-      '.p-meta-value', '.p-section-label',
+      '.p-meta-label', '.p-meta-value', '.p-section-label',
       '.p-article-title', '.p-article-meta',
       '.p-project-name', '.p-project-meta',
       '.p-caption-title', '.p-caption-meta',
@@ -761,20 +786,86 @@
       if (e.key === 'Escape' && imgPanel) { imgPanel.remove(); imgPanel = null; }
     });
 
+    // ── Add/remove gallery images ──────────────────────────────────────────
+    document.querySelectorAll('.p-images').forEach(container => {
+      // Add image button after each p-images block
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '+ Add Image';
+      addBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:4px 12px;cursor:pointer;font-family:inherit;display:block;margin:6px 0;';
+      addBtn.addEventListener('click', () => {
+        const url = prompt('Image URL:', '');
+        if (!url) return;
+        const img = document.createElement('img');
+        img.src = url; img.alt = ''; img.loading = 'lazy';
+        img.dataset.editTarget = 'image';
+        img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
+        // Delete button wrapper
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;display:contents;';
+        container.appendChild(img);
+        // Mark image so it can be right-click deleted
+        img.title = 'Click: edit  |  Right-click: remove';
+        img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+      });
+      container.after(addBtn);
+
+      // Right-click to remove existing images
+      container.querySelectorAll('img').forEach(img => {
+        img.title = 'Click: edit  |  Right-click: remove';
+        img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+      });
+    });
+
+    // ── Add meta row ─────────────────────────────────────────────────────────
+    const metaSection = document.querySelector('.p-meta');
+    if (metaSection) {
+      const addMetaBtn = document.createElement('button');
+      addMetaBtn.textContent = '+ Row';
+      addMetaBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;margin-top:6px;display:block;';
+      addMetaBtn.addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.innerHTML = `<div class="p-meta-label" contenteditable="true" data-edit-target="text">Label</div><div class="p-meta-value" contenteditable="true" data-edit-target="text">Value</div>`;
+        row.style.position = 'relative';
+        // Delete row on right-click
+        row.title = 'Right-click to remove row';
+        row.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this meta row?')) row.remove(); });
+        metaSection.appendChild(row);
+      });
+      metaSection.appendChild(addMetaBtn);
+    }
+
+    // ── Accent color picker ───────────────────────────────────────────────────
+    const accentInput = document.createElement('input');
+    accentInput.type = 'color'; accentInput.value = accent || '#c8c2f5';
+    accentInput.title = 'Page accent color';
+    accentInput.style.cssText = 'width:28px;height:24px;padding:1px;border:1px solid rgba(240,237,232,0.15);background:transparent;cursor:pointer;';
+    accentInput.addEventListener('input', () => {
+      const c = accentInput.value;
+      document.body.dataset.accent = c;
+      document.documentElement.style.setProperty('--accent', c);
+      // Update the inline style in head
+      let styleEl = document.querySelector('head style');
+      if (styleEl && styleEl.textContent.includes('--accent')) {
+        styleEl.textContent = `:root { --accent: ${c}; }`;
+      }
+    });
+
     const bar = document.createElement('div');
     bar.id = 'edit-bar';
     bar.innerHTML = `
       <span class="edit-label">Edit Mode</span>
-      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:8px;">
-        <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;">Music URL</span>
-        <input id="edit-music-url" placeholder="YouTube URL or video ID"
-          style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:260px;"
-          value="${localStorage.getItem('music-vid') ? 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') : ''}">
-        <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
-      </div>
+      <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;">Accent</span>
+      <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;margin-left:8px;">Music</span>
+      <input id="edit-music-url" placeholder="YouTube URL or video ID"
+        style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:220px;"
+        value="${localStorage.getItem('music-vid') ? 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') : ''}">
+      <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
       <button id="edit-copy">Copy HTML</button>
       <button id="edit-close">Exit</button>
     `;
+    // Insert accent picker after "Accent" label
+    const accentLabel = bar.querySelector('span:nth-child(2)');
+    accentLabel.after(accentInput);
     document.body.appendChild(bar);
 
     document.getElementById('edit-music-save').addEventListener('click', () => {
@@ -806,6 +897,15 @@
       clone.querySelectorAll('.p-hero-badge').forEach(el => el.remove());
       const cloneHeroImg = clone.querySelector('.p-hero img');
       if (cloneHeroImg) { ['width','height','left','top','transform','objectFit','objectPosition'].forEach(p => cloneHeroImg.style[p] = ''); }
+      clone.querySelectorAll('.tall-img-outer').forEach(outer => {
+        const img = outer.querySelector('img');
+        if (img) {
+          ['wide','span-2'].forEach(cls => { if (outer.classList.contains(cls)) img.classList.add(cls); });
+          ['width','height','left','top','position','objectFit','objectPosition','transform'].forEach(p => img.style[p] = '');
+          delete img.dataset.tallSetup;
+          outer.replaceWith(img);
+        }
+      });
       ['edit-bar', 'edit-styles', 'edit-img-panel'].forEach(id => {
         const el = clone.getElementById(id);
         if (el) el.remove();
@@ -826,6 +926,7 @@
     });
 
     document.getElementById('edit-close').addEventListener('click', () => {
+      sessionStorage.removeItem('edit-mode');
       const url = new URL(window.location.href);
       url.searchParams.delete('edit');
       window.location.href = url.toString();

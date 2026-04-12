@@ -800,43 +800,50 @@
         <div class="archive-cell-meta">
           <div class="archive-title">Justin Mead Maxon</div>
           <div class="archive-year">2024–</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
       <a class="archive-cell fade-up" href="ijal-morgan.html" data-color="#b08ec9" style="display:block;text-decoration:none;">
         <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/50e18902-6f0d-46dc-9ef4-38d484fcd246_rw_1920.jpg?h=216e1902e69772e4676a95f5ba4b13c3')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Ijal</div>
           <div class="archive-year">2023</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
       <a class="archive-cell fade-up" href="archive-photography.html" data-color="#7ab3d4" style="display:block;text-decoration:none;">
         <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/a384b381-a583-42ab-832c-d532d873d553_rw_1920.jpg?h=1b08e9557c941e37ef6a9e70e5d5f150')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Photography</div>
           <div class="archive-year">2021–</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
       <a class="archive-cell fade-up" href="archive-print.html" data-color="#c9956e" style="display:block;text-decoration:none;">
         <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/6866fb92-9f30-48d6-adae-4bdfa4eda667_rw_1920.jpg?h=c8f11ed919580f89ee3403cb6fdb5fc5')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Print Work</div>
           <div class="archive-year">2023</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
       <a class="archive-cell fade-up" href="archive-editorial.html" data-color="#7ab3d4" style="display:block;text-decoration:none;">
         <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/1a5ad821-00da-4c37-a9b9-3260553441e8_rw_1920.jpg?h=d6a142e23debf5fecefd61044a4d24c9')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Editorial</div>
           <div class="archive-year">2023–</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
       <a class="archive-cell fade-up" href="archive-misc.html" data-color="#8ecfa0" style="display:block;text-decoration:none;">
         <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/0bc5987e-798c-44db-aee0-e6f422b36d21_rw_1920.jpg?h=6b49785c2eb989cf7c83d4af2cffe6cc')"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Miscellaneous</div>
           <div class="archive-year">2020–</div>
-        </div></a>
-      </div>
+        </div>
+      </a>
+      <a class="archive-cell fade-up" href="archive-enchanted.html" data-color="#b08ec9" style="display:block;text-decoration:none;">
+        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/8b27b4eb-9029-44a6-8392-8fd57659bd2b_rw_1920.jpg?h=11a3c8c50ba43c0a6470d4c67c999f93')"></div>
+        <div class="archive-cell-meta">
+          <div class="archive-title">Enchanted Series</div>
+          <div class="archive-year">2022</div>
+        </div>
+      </a>
     </div>
   </section>
 
@@ -1146,6 +1153,12 @@
       var s = document.getElementById('splash');
       if (s) s.remove();
       document.body.style.overflow = '';
+      // Pre-reveal all animated elements immediately — they animate in under the
+      // pt-entry overlay so content is visible by the time the overlay fades.
+      // Fixes black flash when ScrollTrigger hasn't loaded yet.
+      document.querySelectorAll('.reveal-inner, .fade-up, .line-expand').forEach(function (el) {
+        el.classList.add('in');
+      });
       return;
     }
     const splash  = document.getElementById('splash');
@@ -1310,123 +1323,109 @@
   gsap.ticker.lagSmoothing(0);
 
   // ── Custom cursor — physics blob ──
-  const cursor = document.getElementById('cursor');
-  const follower = document.getElementById('cursorFollower');
-  const blobInner = follower;
+  // Wrapped in _initIndexCursor so router.js can call it immediately on SPA back-nav
+  // without waiting for external scripts (GSAP/Lenis/ScrollTrigger) to reload.
+  window._initIndexCursor = function () {
+    var cursorEl   = document.getElementById('cursor');
+    var followerEl = document.getElementById('cursorFollower');
+    if (!cursorEl || !followerEl) return;
 
-  // Mouse target
-  let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+    // Stop any existing index cursor loop
+    window._indexCursorActive = false;
+    if (window._indexMouseMove) {
+      document.removeEventListener('mousemove', window._indexMouseMove);
+      window._indexMouseMove = null;
+    }
 
-  // Blob physics state
-  let bx = mouseX, by = mouseY;   // blob position
-  let vx = 0, vy = 0;             // blob velocity
-  let ax = 0, ay = 0;             // blob acceleration (for deformation)
+    // Seed mouse position from cursor's current location so there's no jump
+    var mouseX = cursorEl.style.left ? parseFloat(cursorEl.style.left) : window.innerWidth  / 2;
+    var mouseY = cursorEl.style.top  ? parseFloat(cursorEl.style.top)  : window.innerHeight / 2;
 
-  // Blob body spring
-  const STIFFNESS = 0.055;
-  const DAMPING   = 0.78;
-  const MASS      = 1.0;
+    var bx = followerEl.style.left ? parseFloat(followerEl.style.left) + 40 : mouseX;
+    var by = followerEl.style.top  ? parseFloat(followerEl.style.top)  + 40 : mouseY;
+    var vx = 0, vy = 0, ax = 0, ay = 0;
 
-  // Per-corner spring state — each of the 8 border-radius values has its own physics
-  // Order: hTail, hTip, hTipB, hTailB, vTailT, vTipT, vTipB, vTailB
-  const cs = Array.from({length: 8}, () => ({ p: 50, v: 0 }));
-  // Slightly different stiffness/damping per corner = organic async wobble
-  const cK = [0.14, 0.20, 0.18, 0.12, 0.16, 0.22, 0.15, 0.19];
-  const cD = [0.58, 0.62, 0.55, 0.60, 0.64, 0.57, 0.61, 0.56];
+    var STIFFNESS = 0.055, DAMPING = 0.78, MASS = 1.0;
+    var cs = Array.from({length: 8}, function () { return { p: 50, v: 0 }; });
+    var cK = [0.14, 0.20, 0.18, 0.12, 0.16, 0.22, 0.15, 0.19];
+    var cD = [0.58, 0.62, 0.55, 0.60, 0.64, 0.57, 0.61, 0.56];
 
-  document.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    gsap.to(cursor, { x: mouseX, y: mouseY, duration: 0.06 });
-  });
+    window._indexMouseMove = function (e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorEl.style.left = mouseX + 'px';
+      cursorEl.style.top  = mouseY + 'px';
+    };
+    document.addEventListener('mousemove', window._indexMouseMove);
 
-  // Physics loop
-  function physicsLoop() {
-    // Spring force toward mouse
-    const fx = (mouseX - bx) * STIFFNESS;
-    const fy = (mouseY - by) * STIFFNESS;
+    var smoothAngle = 0;
+    function physicsLoop() {
+      var fx = (mouseX - bx) * STIFFNESS;
+      var fy = (mouseY - by) * STIFFNESS;
+      var prevVx = vx, prevVy = vy;
+      vx = (vx + fx / MASS) * DAMPING;
+      vy = (vy + fy / MASS) * DAMPING;
+      ax = vx - prevVx; ay = vy - prevVy;
+      bx += vx; by += vy;
 
-    // Track acceleration for squash/stretch
-    const prevVx = vx, prevVy = vy;
+      followerEl.style.left = (bx - 40) + 'px';
+      followerEl.style.top  = (by - 40) + 'px';
 
-    vx = (vx + fx / MASS) * DAMPING;
-    vy = (vy + fy / MASS) * DAMPING;
+      var dx = mouseX - bx, dy = mouseY - by;
+      var pull = Math.sqrt(dx * dx + dy * dy);
+      var rawAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+      var angleDiff = rawAngle - smoothAngle;
+      while (angleDiff >  180) angleDiff -= 360;
+      while (angleDiff < -180) angleDiff += 360;
+      smoothAngle += angleDiff * 0.02;
 
-    ax = vx - prevVx;
-    ay = vy - prevVy;
+      var isHovered = document.body.classList.contains('cursor-hover');
+      var maxPull = isHovered ? 180 : 320;
+      var f = Math.min(pull / maxPull, 1);
+      var t = Date.now() * 0.001;
+      var accel = Math.sqrt(ax * ax + ay * ay);
+      var jolt  = Math.min(accel * 3, 1);
+      var idle  = (1 - f) * 14;
+      var n0 = Math.sin(t * 1.1) * idle,       n1 = Math.sin(t * 0.8 + 1.2) * idle;
+      var n2 = Math.sin(t * 1.4 + 2.4) * idle, n3 = Math.sin(t * 0.7 + 3.6) * idle;
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function clamp(v) { return Math.round(Math.max(2, Math.min(96, v))); }
+      var targets = [
+        clamp(lerp(50+n0,60,f)), clamp(lerp(50+n1,40,f)),
+        clamp(lerp(50+n2,40,f)), clamp(lerp(50+n3,58,f)),
+        clamp(lerp(50+n1,56,f)+jolt*3), clamp(lerp(50+n2,44,f)-jolt*2),
+        clamp(lerp(50+n3,44,f)-jolt*2), clamp(lerp(50+n0,56,f)+jolt*3)
+      ];
+      targets.forEach(function (target, i) {
+        var force = (target - cs[i].p) * cK[i];
+        cs[i].v = (cs[i].v + force) * cD[i];
+        cs[i].p += cs[i].v;
+      });
+      var R = cs.map(function (s) { return Math.round(Math.max(2, Math.min(96, s.p))); });
+      followerEl.style.borderRadius =
+        R[0]+'% '+R[1]+'% '+R[2]+'% '+R[3]+'% / '+R[4]+'% '+R[5]+'% '+R[6]+'% '+R[7]+'%';
+    }
 
-    bx += vx;
-    by += vy;
+    // Snap cursor to current position
+    cursorEl.style.left = mouseX + 'px';
+    cursorEl.style.top  = mouseY + 'px';
 
-    // Position the follower wrapper
-    follower.style.left = (bx - 40) + 'px';
-    follower.style.top  = (by - 40) + 'px';
+    window._indexCursorActive = true;
+    window._destroyIndexCursor = function () {
+      window._indexCursorActive = false;
+      if (window._indexMouseMove) {
+        document.removeEventListener('mousemove', window._indexMouseMove);
+        window._indexMouseMove = null;
+      }
+    };
+    (function idxTick() {
+      if (!window._indexCursorActive) return;
+      physicsLoop();
+      requestAnimationFrame(idxTick);
+    })();
+  };
 
-    // Pull vector: cursor → blob (this is the deformation driver)
-    const dx        = mouseX - bx;
-    const dy        = mouseY - by;
-    const pull      = Math.sqrt(dx * dx + dy * dy);
-    const rawAngle  = Math.atan2(dy, dx) * (180 / Math.PI);
-    // Smooth the rotation so it doesn't spin wildly
-    let angleDiff = rawAngle - physicsLoop.smoothAngle;
-    while (angleDiff > 180)  angleDiff -= 360;
-    while (angleDiff < -180) angleDiff += 360;
-    physicsLoop.smoothAngle += angleDiff * 0.02;
-    const pullAngle = physicsLoop.smoothAngle;
-
-    // 0→1 factor: how stretched the blob is right now
-    const isHovered  = document.body.classList.contains('cursor-hover');
-    const maxPull    = isHovered ? 180 : 320;
-    const f          = Math.min(pull / maxPull, 1); // 0 = circle, 1 = full teardrop
-
-    const t      = Date.now() * 0.001;
-    const accel  = Math.sqrt(ax * ax + ay * ay);
-    const jolt   = Math.min(accel * 3, 1); // 0→1 extra squish from sharp turns
-
-    // Idle organic noise — only present when not moving
-    const idle   = (1 - f) * 14;
-    const n0     = Math.sin(t * 1.1)        * idle;
-    const n1     = Math.sin(t * 0.8 + 1.2)  * idle;
-    const n2     = Math.sin(t * 1.4 + 2.4)  * idle;
-    const n3     = Math.sin(t * 0.7 + 3.6)  * idle;
-
-    const lerp  = (a, b, t) => a + (b - a) * t;
-    const clamp = (v) => Math.round(Math.max(2, Math.min(96, v)));
-
-    // At rest (f=0): all corners ~50% = circle + organic noise
-    // At full pull (f=1): teardrop — pointed tip, round tail
-    // Local space after rotation: right=tip, left=tail
-    const hTail   = clamp(lerp(50 + n0,  60, f));   // TL: tail horizontal
-    const hTip    = clamp(lerp(50 + n1,  40, f));   // TR: tip horizontal
-    const hTipB   = clamp(lerp(50 + n2,  40, f));   // BR: tip horizontal
-    const hTailB  = clamp(lerp(50 + n3,  58, f));   // BL: tail horizontal
-
-    // Vertical: bulge at tail, taper at tip
-    const vTailT  = clamp(lerp(50 + n1,  56, f) + jolt * 3);  // TL vert: tail top
-    const vTipT   = clamp(lerp(50 + n2,  44, f) - jolt * 2);   // TR vert: tip top
-    const vTipB   = clamp(lerp(50 + n3,  44, f) - jolt * 2);   // BR vert: tip bot
-    const vTailB  = clamp(lerp(50 + n0,  56, f) + jolt * 3);  // BL vert: tail bot
-
-    // Spring each corner toward its target — flubber wobble
-    const targets = [hTail, hTip, hTipB, hTailB, vTailT, vTipT, vTipB, vTailB];
-    targets.forEach((target, i) => {
-      const force = (target - cs[i].p) * cK[i];
-      cs[i].v = (cs[i].v + force) * cD[i];
-      cs[i].p += cs[i].v;
-    });
-
-    const R = cs.map(s => Math.round(Math.max(2, Math.min(96, s.p))));
-    blobInner.style.borderRadius =
-      `${R[0]}% ${R[1]}% ${R[2]}% ${R[3]}% / ${R[4]}% ${R[5]}% ${R[6]}% ${R[7]}%`;
-
-    // No transform on follower — transform blocks mix-blend-mode with page text
-    // Direction encoded in border-radius asymmetry only
-
-    requestAnimationFrame(physicsLoop);
-  }
-
-  physicsLoop.smoothAngle = 0;
-  physicsLoop();
+  window._initIndexCursor();
 
   document.querySelectorAll('a, .cap, .archive-cell').forEach(el => {
     el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
@@ -1494,18 +1493,18 @@
     });
   });
 
+  // ── Project row hover preview ──
+  const preview = document.getElementById('preview');
+  const previewTitle = document.getElementById('previewTitle');
+  const previewInner = preview.querySelector('.p-preview-inner');
+  const projectRows = document.querySelectorAll('.project-row');
+
   // ── Project row color on hover ──
   projectRows.forEach(row => {
     const color = row.dataset.color;
     row.addEventListener('mouseenter', () => { if (color) setActiveColor(color); });
     row.addEventListener('mouseleave', () => setActiveColor(currentSectionColor));
   });
-
-  // ── Project row hover preview ──
-  const preview = document.getElementById('preview');
-  const previewTitle = document.getElementById('previewTitle');
-  const previewInner = preview.querySelector('.p-preview-inner');
-  const projectRows = document.querySelectorAll('.project-row');
 
   projectRows.forEach(row => {
     row.addEventListener('click', (e) => {
@@ -1553,6 +1552,457 @@
     });
   });
 
+  // ── Edit mode ──
+  (function () {
+    const EDIT_KEY = 'faux2025';
+    if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
+      sessionStorage.setItem('edit-mode', '1');
+    }
+    if (sessionStorage.getItem('edit-mode') !== '1') return;
+
+    document.body.classList.add('edit-mode');
+
+    // ── Styles ──────────────────────────────────────────────────────────────
+    const editStyle = document.createElement('style');
+    editStyle.id = 'edit-styles';
+    editStyle.textContent = `
+      body.edit-mode [data-edit-target="text"] {
+        outline:1px dashed rgba(200,194,245,0.3); min-width:10px; min-height:1em;
+      }
+      body.edit-mode [data-edit-target="text"]:focus {
+        outline:1px solid rgba(200,194,245,0.7); background:rgba(200,194,245,0.04);
+      }
+      body.edit-mode .project-row[draggable], body.edit-mode .archive-cell[draggable] { cursor:grab; }
+      body.edit-mode .drag-over { outline:2px solid rgba(200,194,245,0.6) !important; }
+      .edit-img-btn {
+        position:absolute; top:6px; right:6px; z-index:10;
+        width:22px; height:22px; border-radius:50%;
+        background:rgba(12,12,12,0.75); border:1px solid rgba(200,194,245,0.4);
+        color:#c8c2f5; font-size:11px; display:flex; align-items:center;
+        justify-content:center; cursor:pointer; line-height:1;
+        transition:background 0.15s, border-color 0.15s;
+      }
+      .edit-img-btn:hover { background:rgba(200,194,245,0.15); border-color:rgba(200,194,245,0.8); }
+      .edit-del-btn {
+        position:absolute; top:6px; left:6px; z-index:10;
+        width:22px; height:22px; border-radius:50%;
+        background:rgba(160,40,40,0.8); border:none;
+        color:#fff; font-size:15px; display:flex; align-items:center;
+        justify-content:center; cursor:pointer; line-height:1;
+      }
+      #edit-bar {
+        position:fixed; bottom:28px; right:28px; z-index:999999;
+        display:flex; align-items:center; gap:7px; flex-wrap:wrap; max-width:92vw;
+        background:#0c0c0c; border:1px solid rgba(200,194,245,0.3);
+        padding:10px 14px; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+      }
+      .edit-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:#c8c2f5; }
+      .edit-sep { width:1px; height:14px; background:rgba(240,237,232,0.15); flex-shrink:0; }
+      #edit-bar input {
+        background:transparent; border:1px solid rgba(240,237,232,0.12);
+        color:#f0ede8; padding:3px 8px; font-size:10px; font-family:monospace; outline:none;
+      }
+      #edit-bar input:focus { border-color:rgba(200,194,245,0.5); }
+      #edit-bar button {
+        font-size:9px; letter-spacing:0.15em; text-transform:uppercase;
+        border:1px solid rgba(240,237,232,0.2); background:transparent;
+        color:#f0ede8; padding:4px 10px; cursor:pointer; font-family:inherit; transition:background 0.15s;
+      }
+      #edit-bar button:hover { background:rgba(240,237,232,0.06); }
+      #edit-copy, #edit-music-apply { border-color:#c8c2f5; color:#c8c2f5; }
+      .edit-new-page-overlay {
+        position:fixed; inset:0; z-index:9999998; background:rgba(0,0,0,0.88);
+        display:flex; align-items:center; justify-content:center;
+      }
+      .edit-new-page-box {
+        background:#0c0c0c; border:1px solid rgba(200,194,245,0.4);
+        padding:28px 32px; width:420px; max-width:90vw;
+        font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+      }
+      .edit-new-page-box h3 {
+        font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#c8c2f5; margin:0 0 18px;
+      }
+      .edit-new-page-box label {
+        display:block; font-size:9px; letter-spacing:0.12em; text-transform:uppercase;
+        color:rgba(240,237,232,0.45); margin-bottom:4px;
+      }
+      .edit-new-page-box input, .edit-new-page-box select {
+        width:100%; box-sizing:border-box;
+        background:transparent; border:1px solid rgba(240,237,232,0.15);
+        color:#f0ede8; padding:5px 8px; font-size:11px; font-family:monospace;
+        outline:none; margin-bottom:12px;
+      }
+      .edit-new-page-box input:focus { border-color:rgba(200,194,245,0.5); }
+      .edit-new-page-box .btn-row { display:flex; gap:8px; margin-top:4px; }
+      .edit-new-page-box button {
+        font-size:9px; letter-spacing:0.15em; text-transform:uppercase;
+        border:1px solid rgba(240,237,232,0.2); background:transparent;
+        color:#f0ede8; padding:5px 14px; cursor:pointer; font-family:inherit;
+      }
+      .edit-new-page-box button.primary { border-color:#c8c2f5; color:#c8c2f5; }
+    `;
+    document.head.appendChild(editStyle);
+
+    // ── Editable text fields ─────────────────────────────────────────────────
+    [
+      '.info-tagline', '.info-h1 .reveal-inner', '.info-bio',
+      '.cap', '.scroll-hint', '.s-label > span',
+      '.archive-title', '.archive-year',
+      '.p-title', '.p-tag', '.p-year', '.p-num',
+      '.contact-h .reveal-inner',
+      '.ticker-item',
+    ].forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        el.contentEditable = 'true';
+        el.dataset.editTarget = 'text';
+      });
+    });
+
+    // Contact rows — inline-edit the label; double-click to change the href
+    document.querySelectorAll('.contact-row').forEach(row => {
+      row.title = 'Double-click to edit link';
+      const label = row.querySelector('span:not(.contact-arrow)');
+      if (label) { label.contentEditable = 'true'; label.dataset.editTarget = 'text'; }
+      row.addEventListener('dblclick', e => {
+        if (e.target.isContentEditable) return;
+        const cur = row.getAttribute('href') || '';
+        const val = prompt('Link (mailto:, https://, tel:):', cur);
+        if (val !== null) row.setAttribute('href', val);
+      });
+    });
+
+    // ── Image edit (inline URL input shown in bar) ───────────────────────────
+    let activeImgTarget = null;
+    const imgInput = document.createElement('input');
+    imgInput.id = 'idx-img-input';
+    imgInput.placeholder = 'Image URL';
+    imgInput.style.cssText = 'display:none;width:220px;';
+    const imgApply = document.createElement('button');
+    imgApply.id = 'idx-img-apply';
+    imgApply.textContent = 'Apply';
+    imgApply.style.cssText = 'display:none;border-color:rgba(200,194,245,0.4)!important;color:#c8c2f5!important;';
+
+    function openImgEdit(target, currentUrl) {
+      activeImgTarget = target;
+      imgInput.value = currentUrl;
+      imgInput.style.display = '';
+      imgApply.style.display = '';
+      imgInput.focus();
+      imgInput.select();
+    }
+    function applyImg() {
+      if (!activeImgTarget) return;
+      const url = imgInput.value.trim();
+      if (!url) return;
+      if (activeImgTarget.classList.contains('archive-cell-inner'))
+        activeImgTarget.style.backgroundImage = `url('${url}')`;
+      else if (activeImgTarget.classList.contains('project-row'))
+        activeImgTarget.dataset.img = url;
+      imgInput.style.display = 'none';
+      imgApply.style.display = 'none';
+    }
+    imgApply.addEventListener('click', applyImg);
+    imgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') applyImg();
+      if (e.key === 'Escape') { imgInput.style.display = 'none'; imgApply.style.display = 'none'; }
+    });
+
+    function addImgBtn(parent, getTarget, getUrl) {
+      parent.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.className = 'edit-img-btn'; btn.textContent = '✎'; btn.title = 'Edit image';
+      btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(getTarget(), getUrl()); });
+      parent.appendChild(btn);
+      return btn;
+    }
+    function addDelBtn(parent, onConfirm) {
+      parent.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.className = 'edit-del-btn'; btn.textContent = '×'; btn.title = 'Delete';
+      btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); if (confirm('Remove this entry?')) onConfirm(); });
+      parent.appendChild(btn);
+    }
+
+    // Archive-cell image editing
+    document.querySelectorAll('.archive-cell').forEach(cell => {
+      addImgBtn(cell,
+        () => cell.querySelector('.archive-cell-inner'),
+        () => (cell.querySelector('.archive-cell-inner').style.backgroundImage || '').replace(/^url\(['"]?|['"]?\)$/g, '')
+      );
+    });
+
+    // Project-row image editing
+    document.querySelectorAll('.project-row').forEach(row => {
+      row.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.className = 'edit-img-btn'; btn.textContent = '✎'; btn.style.top = '50%'; btn.style.transform = 'translateY(-50%)'; btn.title = 'Edit preview image';
+      btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(row, row.dataset.img || ''); });
+      row.appendChild(btn);
+    });
+
+    // ── Drag to reorder ──────────────────────────────────────────────────────
+    function enableDrag(container, selector) {
+      let src = null;
+      function wire(el) {
+        el.draggable = true;
+        el.addEventListener('dragstart', e => { src = el; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => el.style.opacity = '0.4', 0); });
+        el.addEventListener('dragend',   () => { el.style.opacity = ''; container.querySelectorAll(selector).forEach(i => i.classList.remove('drag-over')); renumber(); });
+        el.addEventListener('dragover',  e => e.preventDefault());
+        el.addEventListener('dragenter', () => { if (el !== src) el.classList.add('drag-over'); });
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('drop', e => {
+          e.preventDefault(); e.stopPropagation();
+          if (src && src !== el) {
+            const nodes = [...container.querySelectorAll(selector)];
+            nodes.indexOf(src) < nodes.indexOf(el)
+              ? container.insertBefore(src, el.nextSibling)
+              : container.insertBefore(src, el);
+          }
+          el.classList.remove('drag-over');
+        });
+      }
+      function renumber() {
+        container.querySelectorAll('.p-num').forEach((n, i) => { n.textContent = String(i+1).padStart(2,'0'); });
+      }
+      container.querySelectorAll(selector).forEach(wire);
+      return wire;
+    }
+
+    const projectList = document.querySelector('.project-list');
+    const archiveGrid = document.querySelector('.archive-grid');
+    const wireProjectRow = projectList ? enableDrag(projectList, '.project-row') : null;
+    const wireArchiveCell = archiveGrid ? enableDrag(archiveGrid, '.archive-cell') : null;
+
+    // ── Add Work Entry ───────────────────────────────────────────────────────
+    function addWorkEntry() {
+      if (!projectList) return;
+      const n = projectList.querySelectorAll('.project-row').length + 1;
+      const row = document.createElement('a');
+      row.className = 'project-row';
+      row.href = 'new-project.html';
+      row.setAttribute('data-title', 'New Project');
+      row.setAttribute('data-color', '#c8c2f5');
+      row.setAttribute('data-img', '');
+      row.style.position = 'relative';
+      row.innerHTML = `<div class="project-row-bg"></div>
+        <div class="p-num" contenteditable="true" data-edit-target="text">${String(n).padStart(2,'0')}</div>
+        <div class="p-info">
+          <div class="p-title-wrap">
+            <span class="p-title" contenteditable="true" data-edit-target="text">New Project</span>
+          </div>
+          <div class="p-tags">
+            <span class="p-tag" contenteditable="true" data-edit-target="text">Category</span>
+          </div>
+        </div>
+        <div class="p-year" contenteditable="true" data-edit-target="text">2025</div>
+        <div class="p-arrow">↙</div>`;
+      row.addEventListener('dblclick', e => {
+        if (e.target.isContentEditable) return;
+        const val = prompt('Page filename (e.g. my-project.html):', row.getAttribute('href'));
+        if (val !== null) row.setAttribute('href', val.trim());
+      });
+      const imgBtn = document.createElement('button');
+      imgBtn.className = 'edit-img-btn'; imgBtn.textContent = '✎'; imgBtn.style.top = '50%'; imgBtn.style.transform = 'translateY(-50%)';
+      imgBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(row, row.dataset.img || ''); });
+      row.appendChild(imgBtn);
+      addDelBtn(row, () => row.remove());
+      if (wireProjectRow) wireProjectRow(row);
+      projectList.appendChild(row);
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ── Add Archive Entry ────────────────────────────────────────────────────
+    function addArchiveEntry() {
+      if (!archiveGrid) return;
+      const cell = document.createElement('a');
+      cell.className = 'archive-cell';
+      cell.href = 'new-project.html';
+      cell.setAttribute('data-color', '#c8c2f5');
+      cell.style.cssText = 'display:block;text-decoration:none;position:relative;';
+      cell.innerHTML = `<div class="archive-cell-inner" style="background-image:url('')"></div>
+        <div class="archive-cell-meta">
+          <div class="archive-title" contenteditable="true" data-edit-target="text">New Entry</div>
+          <div class="archive-year" contenteditable="true" data-edit-target="text">2025</div>
+        </div>`;
+      cell.addEventListener('dblclick', e => {
+        if (e.target.isContentEditable) return;
+        const val = prompt('Page filename:', cell.getAttribute('href'));
+        if (val !== null) cell.setAttribute('href', val.trim());
+      });
+      addImgBtn(cell,
+        () => cell.querySelector('.archive-cell-inner'),
+        () => (cell.querySelector('.archive-cell-inner').style.backgroundImage || '').replace(/^url\(['"]?|['"]?\)$/g, '')
+      );
+      addDelBtn(cell, () => cell.remove());
+      if (wireArchiveCell) wireArchiveCell(cell);
+      archiveGrid.appendChild(cell);
+      cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ── Add Page (modal → generates HTML + adds entry) ───────────────────────
+    function showAddPageDialog() {
+      const ov = document.createElement('div');
+      ov.className = 'edit-new-page-overlay';
+      ov.innerHTML = `<div class="edit-new-page-box">
+        <h3>Add New Page</h3>
+        <label>Filename</label><input id="np-slug" value="new-project.html" placeholder="my-project.html">
+        <label>Page Title</label><input id="np-title" placeholder="Project Name">
+        <label>Subtitle / Tagline</label><input id="np-sub" placeholder="Discipline or tagline">
+        <label>Hero Image URL</label><input id="np-hero" placeholder="https://...">
+        <label>Accent Color</label><input id="np-color" value="#c8c2f5" placeholder="#c8c2f5">
+        <label>Add entry to</label>
+        <select id="np-sec"><option value="work">Work list</option><option value="archive">Archive grid</option></select>
+        <div class="btn-row">
+          <button class="primary" id="np-create">Copy Page HTML + Add Entry</button>
+          <button id="np-cancel">Cancel</button>
+        </div>
+      </div>`;
+      document.body.appendChild(ov);
+      document.getElementById('np-cancel').addEventListener('click', () => ov.remove());
+      document.getElementById('np-create').addEventListener('click', () => {
+        const slug  = (document.getElementById('np-slug').value.trim() || 'new-project.html').replace(/[^a-z0-9._-]/gi,'');
+        const title = document.getElementById('np-title').value.trim() || 'New Project';
+        const sub   = document.getElementById('np-sub').value.trim()   || 'Discipline';
+        const hero  = document.getElementById('np-hero').value.trim()  || 'IMAGE_URL_HERE';
+        const color = document.getElementById('np-color').value.trim() || '#c8c2f5';
+        const sec   = document.getElementById('np-sec').value;
+
+        const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${title} — Sebastian Taylor</title>\n  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">\n  <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">\n  <link rel="stylesheet" href="page.css">\n  <style>:root { --accent: ${color}; }</style>\n</head>\n<body data-accent="${color}">\n<div id="page-transition"></div>\n<div class="cursor" id="cursor">®</div>\n<div class="cursor-follower" id="cursorFollower"></div>\n<nav class="p-nav">\n  <a class="p-nav-back" href="index.html" id="back-link">Work</a>\n  <a class="p-nav-name" href="index.html">Sebastian Taylor</a>\n</nav>\n<div class="p-hero"><img src="${hero}" alt="${title}" loading="eager"></div>\n<section class="p-info">\n  <div>\n    <div class="p-title">${title}</div>\n    <div class="p-subtitle">${sub}</div>\n    <p class="p-body">Project description goes here.</p>\n  </div>\n  <div class="p-meta">\n    <div><div class="p-meta-label">Year</div><div class="p-meta-value">2025</div></div>\n    <div><div class="p-meta-label">Client</div><div class="p-meta-value">Client Name</div></div>\n    <div><div class="p-meta-label">Disciplines</div><div class="p-meta-value">Brand Identity, Art Direction</div></div>\n  </div>\n</section>\n<div class="p-images">\n  <img src="IMAGE_URL_HERE" alt="" loading="lazy">\n  <img src="IMAGE_URL_HERE" alt="" loading="lazy">\n</div>\n<a class="p-back-row" href="index.html" id="back-link2">\n  <div class="p-back-row-bg"></div>\n  <div><div class="p-back-label">Back to</div><div class="p-back-title">All Work</div></div>\n  <div class="p-back-arrow">↙</div>\n</a>\n<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"><\/script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>\n<script src="router.js"><\/script>\n<script src="page.js"><\/script>\n<script src="music.js"><\/script>\n</body></html>`;
+
+        const doCopy = () => navigator.clipboard.writeText(html)
+          .then(() => alert(`Copied! Paste into a new file named "${slug}" in your portfolio folder.`))
+          .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert(`Copied! Paste into "${slug}".`); });
+        doCopy();
+
+        if (sec === 'work') {
+          const n = projectList.querySelectorAll('.project-row').length + 1;
+          const row = document.createElement('a');
+          row.className = 'project-row';
+          row.href = slug;
+          row.setAttribute('data-title', title);
+          row.setAttribute('data-color', color);
+          row.setAttribute('data-img', hero);
+          row.style.position = 'relative';
+          row.innerHTML = `<div class="project-row-bg"></div>
+            <div class="p-num" contenteditable="true" data-edit-target="text">${String(n).padStart(2,'0')}</div>
+            <div class="p-info">
+              <div class="p-title-wrap"><span class="p-title" contenteditable="true" data-edit-target="text">${title}</span></div>
+              <div class="p-tags"><span class="p-tag" contenteditable="true" data-edit-target="text">Category</span></div>
+            </div>
+            <div class="p-year" contenteditable="true" data-edit-target="text">2025</div>
+            <div class="p-arrow">↙</div>`;
+          addDelBtn(row, () => row.remove());
+          const ib = document.createElement('button');
+          ib.className = 'edit-img-btn'; ib.textContent = '✎'; ib.style.top = '50%'; ib.style.transform = 'translateY(-50%)';
+          ib.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(row, row.dataset.img || ''); });
+          row.appendChild(ib);
+          if (wireProjectRow) wireProjectRow(row);
+          if (projectList) projectList.appendChild(row);
+        } else {
+          const cell = document.createElement('a');
+          cell.className = 'archive-cell';
+          cell.href = slug;
+          cell.setAttribute('data-color', color);
+          cell.style.cssText = 'display:block;text-decoration:none;position:relative;';
+          cell.innerHTML = `<div class="archive-cell-inner" style="background-image:url('${hero}')"></div>
+            <div class="archive-cell-meta">
+              <div class="archive-title" contenteditable="true" data-edit-target="text">${title}</div>
+              <div class="archive-year" contenteditable="true" data-edit-target="text">2025</div>
+            </div>`;
+          addImgBtn(cell, () => cell.querySelector('.archive-cell-inner'), () => (cell.querySelector('.archive-cell-inner').style.backgroundImage || '').replace(/^url\(['"]?|['"]?\)$/g, ''));
+          addDelBtn(cell, () => cell.remove());
+          if (wireArchiveCell) wireArchiveCell(cell);
+          if (archiveGrid) archiveGrid.appendChild(cell);
+        }
+        ov.remove();
+      });
+    }
+
+    // ── Font size controls ───────────────────────────────────────────────────
+    let focusedEditable = null;
+    document.addEventListener('focusin', e => { if (e.target.dataset.editTarget === 'text') focusedEditable = e.target; });
+    function adjustFontSize(delta) {
+      if (!focusedEditable) return;
+      const cur = parseFloat(getComputedStyle(focusedEditable).fontSize) || 16;
+      focusedEditable.style.fontSize = Math.max(8, Math.round(cur + delta)) + 'px';
+    }
+
+    // ── YouTube playlist config ──────────────────────────────────────────────
+    const musicInput = document.createElement('input');
+    musicInput.id = 'edit-music-url';
+    musicInput.placeholder = 'YouTube playlist URL';
+    musicInput.style.width = '200px';
+    if (localStorage.getItem('music-vid'))
+      musicInput.value = 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') + (localStorage.getItem('music-list') ? '&list=' + localStorage.getItem('music-list') : '');
+    const musicApply = document.createElement('button');
+    musicApply.id = 'edit-music-apply';
+    musicApply.textContent = '♪ Set';
+    musicApply.addEventListener('click', () => {
+      const raw = musicInput.value.trim();
+      if (!raw) return;
+      const vidMatch  = raw.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+      const listMatch = raw.match(/[?&]list=([^&\s]+)/);
+      const vid  = vidMatch  ? vidMatch[1]  : raw;
+      const list = listMatch ? listMatch[1] : (vid ? 'RD' + vid : vid);
+      localStorage.setItem('music-vid',  vid);
+      localStorage.setItem('music-list', list);
+      if (window._musicPlayer) window._musicPlayer.updateUrl(vid, list);
+      musicApply.textContent = 'Set ✓';
+      setTimeout(() => { musicApply.textContent = '♪ Set'; }, 2000);
+    });
+
+    // ── Copy HTML ────────────────────────────────────────────────────────────
+    const copyBtn = document.createElement('button');
+    copyBtn.id = 'edit-copy';
+    copyBtn.textContent = 'Copy HTML';
+    copyBtn.addEventListener('click', () => {
+      const clone = document.documentElement.cloneNode(true);
+      clone.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
+      clone.querySelectorAll('[data-edit-target]').forEach(el => el.removeAttribute('data-edit-target'));
+      clone.querySelectorAll('.edit-img-btn,.edit-del-btn').forEach(b => b.remove());
+      ['edit-bar','edit-styles'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
+      clone.querySelector('body').classList.remove('edit-mode');
+      // Sync data-title on project rows
+      clone.querySelectorAll('.project-row').forEach(row => {
+        const t = row.querySelector('.p-title');
+        if (t) row.setAttribute('data-title', t.textContent.trim());
+      });
+      const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+      navigator.clipboard.writeText(html)
+        .then(() => { copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy HTML'; }, 2500); })
+        .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy HTML'; }, 2500); });
+    });
+
+    // ── Exit ─────────────────────────────────────────────────────────────────
+    const exitBtn = document.createElement('button');
+    exitBtn.id = 'edit-close';
+    exitBtn.textContent = 'Exit';
+    exitBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('edit-mode');
+      const u = new URL(window.location.href); u.searchParams.delete('edit');
+      window.location.href = u.toString();
+    });
+
+    // ── Build edit bar ────────────────────────────────────────────────────────
+    const bar = document.createElement('div');
+    bar.id = 'edit-bar';
+    const sep = () => Object.assign(document.createElement('div'), { className: 'edit-sep' });
+    const lbl = Object.assign(document.createElement('span'), { className: 'edit-label', textContent: 'Edit Mode' });
+    const addWorkBtn    = Object.assign(document.createElement('button'), { textContent: '+ Work' });
+    const addArchiveBtn = Object.assign(document.createElement('button'), { textContent: '+ Archive' });
+    const addPageBtn    = Object.assign(document.createElement('button'), { textContent: '+ Page' });
+    const sizeUp = Object.assign(document.createElement('button'), { textContent: 'A+', title: 'Increase font size of focused text' });
+    const sizeDn = Object.assign(document.createElement('button'), { textContent: 'A−', title: 'Decrease font size of focused text' });
+    addWorkBtn.addEventListener('click', addWorkEntry);
+    addArchiveBtn.addEventListener('click', addArchiveEntry);
+    addPageBtn.addEventListener('click', showAddPageDialog);
+    sizeUp.addEventListener('click', () => adjustFontSize(1));
+    sizeDn.addEventListener('click', () => adjustFontSize(-1));
+    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), copyBtn, exitBtn]
+      .forEach(el => bar.appendChild(el));
+    document.body.appendChild(bar);
+
+  })();
 
 </script>
 <script src="music.js"></script>

@@ -2,6 +2,10 @@
 // Included on every page. YouTube IFrame API loaded here.
 
 (function () {
+  // Guard: music.js runs exactly once. The index path re-executes scripts on
+  // every back-navigation — this prevents a second player from being created.
+  if (window._musicPlayer) return;
+
   var DEFAULT_VID  = 'DcNLfwlXGqw';
   var DEFAULT_LIST = 'RDDcNLfwlXGqw';
 
@@ -82,7 +86,9 @@
   var playerReady = false;
   var isPlaying   = false;
   // Default: try to play unless user explicitly paused in this session
-  var resumeIntent = sessionStorage.getItem('music-state') !== 'paused';
+  var resumeIntent = sessionStorage.getItem('music-state') === 'playing';
+  // Tracks user's explicit intent — not clobbered by YouTube API state events
+  var userWantsPlaying = resumeIntent;
 
   function updateBtn() {
     if (isPlaying) {
@@ -101,7 +107,7 @@
       height: 113,
       videoId: storedVid(),
       playerVars: {
-        autoplay:       1,
+        autoplay:       0,
         list:           storedList(),
         listType:       'playlist',
         controls:       0,
@@ -121,7 +127,15 @@
         onStateChange: function (e) {
           var wasPlaying = isPlaying;
           isPlaying = (e.data === 1); // YT.PlayerState.PLAYING
-          sessionStorage.setItem('music-state', isPlaying ? 'playing' : 'paused');
+          // Only reflect explicit user intent — not YouTube pausing on its own during SPA swaps
+          if (e.data === 1) { userWantsPlaying = true; sessionStorage.setItem('music-state', 'playing'); }
+          // e.data === 2 fired by button click sets userWantsPlaying=false BEFORE pauseVideo(),
+          // so only save 'paused' when userWantsPlaying is already false (explicit user pause)
+          if (e.data === 2 && !userWantsPlaying) { sessionStorage.setItem('music-state', 'paused'); }
+          // Unexpected pause — rescue immediately
+          if (e.data === 2 && userWantsPlaying) {
+            setTimeout(function () { if (userWantsPlaying && player && playerReady && !isPlaying) player.playVideo(); }, 80);
+          }
           updateBtn();
           // Show song name when playback starts (not on resume from same state)
           if (isPlaying && !wasPlaying) {
@@ -135,9 +149,9 @@
         },
         onError: function () {
           // Radio mix may be restricted — fall back to single-video loop
-          if (player) {
-            player.loadVideoById({ videoId: storedVid() });
-          }
+          if (!player) return;
+          if (isPlaying) player.loadVideoById({ videoId: storedVid() });
+          else player.cueVideoById({ videoId: storedVid() });
         },
       },
     });
@@ -162,9 +176,13 @@
   // ── Toggle ─────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
     if (!player || !playerReady) return;
-    if (isPlaying) player.pauseVideo();
-    else {
-      // Refresh ring colors on each play
+    if (isPlaying) {
+      userWantsPlaying = false; // set intent BEFORE pauseVideo fires onStateChange
+      sessionStorage.setItem('music-state', 'paused');
+      player.pauseVideo();
+    } else {
+      userWantsPlaying = true;
+      sessionStorage.setItem('music-state', 'playing');
       ring.style.background = makeRingGradient();
       player.playVideo();
     }
@@ -175,6 +193,68 @@
     if (isPlaying) positionRing();
   });
 
+  // ── Keyboard controls ──────────────────────────────────────────
+  // M         → toggle play / pause
+  // . (period) → skip to next track
+  // , (comma)  → skip to previous track
+  document.addEventListener('keydown', function (e) {
+    if (!player || !playerReady) return;
+    // Leave modifier combos (Ctrl+S, Alt+←, etc.) untouched
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    // Don't intercept while typing in any text field
+    var active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+
+    switch (e.code) {
+      case 'KeyM':
+        e.preventDefault();
+        if (isPlaying) {
+          userWantsPlaying = false;
+          sessionStorage.setItem('music-state', 'paused');
+          player.pauseVideo();
+        } else {
+          userWantsPlaying = true;
+          sessionStorage.setItem('music-state', 'playing');
+          ring.style.background = makeRingGradient();
+          player.playVideo();
+        }
+        break;
+      case 'Period':
+        e.preventDefault();
+        userWantsPlaying = true;
+        sessionStorage.setItem('music-state', 'playing');
+        player.nextVideo();
+        break;
+      case 'Comma':
+        e.preventDefault();
+        userWantsPlaying = true;
+        sessionStorage.setItem('music-state', 'playing');
+        player.previousVideo();
+        break;
+    }
+  });
+
+  // ── Watchdog: polls every 150ms — resumes on any non-playing state ───────
+  function tryResume() {
+    if (!userWantsPlaying || !player || !playerReady) return;
+    try {
+      var s = player.getPlayerState();
+      // 1 = playing, 3 = buffering (leave alone). Everything else → resume.
+      if (s !== 1 && s !== 3) player.playVideo();
+    } catch (e) {}
+  }
+  setInterval(tryResume, 150);
+
+  // ── After every SPA navigation, fire multiple recovery attempts ───────────
+  // Covers the window where GSAP/Lenis re-init can nudge YouTube into pausing.
+  window.addEventListener('spa-navigated', function () {
+    if (!userWantsPlaying) return;
+    setTimeout(tryResume, 50);
+    setTimeout(tryResume, 200);
+    setTimeout(tryResume, 500);
+    setTimeout(tryResume, 900);
+  });
+
   // ── Exposed for edit mode URL update ──────────────────────────
   window._musicPlayer = {
     updateUrl: function (vid, list) {
@@ -182,6 +262,12 @@
       localStorage.setItem('music-list', list);
       if (player && playerReady) {
         player.loadPlaylist({ list: list, listType: 'playlist', index: 0, startSeconds: 0 });
+        if (!isPlaying) player.pauseVideo();
+      }
+    },
+    // Called by router after every SPA swap to restore play state
+    resume: function () {
+      if (userWantsPlaying && player && playerReady && !isPlaying) {
         player.playVideo();
       }
     },
