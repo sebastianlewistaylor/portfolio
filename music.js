@@ -165,7 +165,6 @@
   // . / MediaTrackNext     → next track
   // , / MediaTrackPrevious → previous track
   document.addEventListener('keydown', function (e) {
-    if (!controller || !controllerReady) return;
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     var active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
@@ -174,20 +173,12 @@
       case 'KeyM':
       case 'MediaPlayPause':
         e.preventDefault();
-        if (isPlaying) {
-          userWantsPlaying = false;
-          sessionStorage.setItem('music-state', 'paused');
-          controller.pause();
-        } else {
-          userWantsPlaying = true;
-          sessionStorage.setItem('music-state', 'playing');
-          ring.style.background = makeRingGradient();
-          controller.play();
-        }
+        btn.click(); // exact same action as tapping the music button
         break;
       case 'Period':
       case 'MediaTrackNext':
         e.preventDefault();
+        if (!controller || !controllerReady) return;
         userWantsPlaying = true;
         sessionStorage.setItem('music-state', 'playing');
         try { controller.nextTrack(); } catch (err) {}
@@ -195,6 +186,7 @@
       case 'Comma':
       case 'MediaTrackPrevious':
         e.preventDefault();
+        if (!controller || !controllerReady) return;
         userWantsPlaying = true;
         sessionStorage.setItem('music-state', 'playing');
         try { controller.previousTrack(); } catch (err) {}

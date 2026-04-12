@@ -958,53 +958,40 @@
     // ── GitHub API push (publishes directly to the repo) ──────────────────
     async function ghPush(html, filename) {
       const REPO = 'sebastianlewistaylor/portfolio';
-      let token = localStorage.getItem('gh-edit-token');
+      const saveEl = document.getElementById('edit-save');
 
+      let token = localStorage.getItem('gh-edit-token');
       if (!token) {
-        token = await new Promise(resolve => {
-          const ov = document.createElement('div');
-          ov.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;';
-          ov.innerHTML = `<div style="background:#0c0c0c;border:1px solid rgba(200,194,245,0.4);padding:28px 32px;width:420px;max-width:90vw;font-family:Helvetica Neue,sans-serif;">
-            <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#c8c2f5;margin-bottom:14px;">GitHub Token Required</div>
-            <div style="font-size:11px;color:rgba(240,237,232,0.5);margin-bottom:6px;line-height:1.7;">
-              Create a token at <code style="color:#c8c2f5;">github.com/settings/tokens</code><br>
-              → Generate new token (classic) → select <code style="color:#c8c2f5;">repo</code> scope
-            </div>
-            <div style="font-size:10px;color:rgba(240,237,232,0.3);margin-bottom:14px;">Stored in your browser only. Never leaves this device.</div>
-            <input id="_gh_tok" placeholder="ghp_…" style="width:100%;box-sizing:border-box;background:transparent;border:1px solid rgba(240,237,232,0.2);color:#f0ede8;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;margin-bottom:14px;">
-            <div style="display:flex;gap:8px;">
-              <button id="_gh_ok" style="flex:1;padding:8px;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;background:#1db954;border:none;color:#000;cursor:pointer;font-weight:700;">Save & Publish</button>
-              <button id="_gh_cancel" style="padding:8px 14px;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;background:transparent;border:1px solid rgba(240,237,232,0.2);color:#f0ede8;cursor:pointer;">Cancel</button>
-            </div>
-          </div>`;
-          document.body.appendChild(ov);
-          ov.querySelector('#_gh_ok').onclick = () => {
-            const t = ov.querySelector('#_gh_tok').value.trim();
-            if (t) localStorage.setItem('gh-edit-token', t);
-            ov.remove(); resolve(t || null);
-          };
-          ov.querySelector('#_gh_cancel').onclick = () => { ov.remove(); resolve(null); };
-          setTimeout(() => ov.querySelector('#_gh_tok').focus(), 50);
-        });
-        if (!token) {
-          // User cancelled — reset button
-          const s = document.getElementById('edit-save');
-          if (s) { s.textContent = 'Save'; s.disabled = false; }
+        // prompt() is synchronous — guaranteed to appear, no z-index/async issues
+        const entered = prompt(
+          'GitHub Personal Access Token required.\n\n' +
+          'Create one at: github.com/settings/tokens\n' +
+          '→ Generate new token (classic) → check "repo" scope\n\n' +
+          'Token is saved in your browser for future saves.',
+          ''
+        );
+        if (!entered || !entered.trim()) {
+          saveEl.textContent = 'Save'; saveEl.style.opacity = ''; saveEl.disabled = false;
           return;
         }
+        token = entered.trim();
+        localStorage.setItem('gh-edit-token', token);
       }
 
-      const saveEl = document.getElementById('edit-save');
       saveEl.textContent = 'Pushing…';
-      saveEl.disabled = true;
 
       try {
         const apiUrl = `https://api.github.com/repos/${REPO}/contents/${filename}`;
         const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
 
         const getRes = await fetch(apiUrl, { headers });
-        if (getRes.status === 401) { localStorage.removeItem('gh-edit-token'); throw new Error('Token invalid — enter it again'); }
-        if (!getRes.ok) throw new Error('Could not read file (HTTP ' + getRes.status + ')');
+        if (getRes.status === 401) {
+          localStorage.removeItem('gh-edit-token');
+          saveEl.textContent = 'Save'; saveEl.style.opacity = ''; saveEl.disabled = false;
+          alert('Token invalid or expired. Press Save again to enter a new one.');
+          return;
+        }
+        if (!getRes.ok) throw new Error('GitHub HTTP ' + getRes.status);
         const fileData = await getRes.json();
 
         const encoded = btoa(unescape(encodeURIComponent(html)));
@@ -1012,15 +999,15 @@
           method: 'PUT', headers,
           body: JSON.stringify({ message: 'Update ' + filename + ' via edit mode', content: encoded, sha: fileData.sha })
         });
-        if (!putRes.ok) { const e = await putRes.json(); throw new Error(e.message || 'Push failed'); }
+        if (!putRes.ok) { const e = await putRes.json().catch(() => ({})); throw new Error(e.message || 'Push failed ' + putRes.status); }
 
         saveEl.textContent = 'Published ✓';
-        saveEl.style.background = '#17a849';
-        setTimeout(() => { saveEl.textContent = 'Save'; saveEl.style.background = ''; saveEl.disabled = false; }, 3000);
-      } catch (err) {
-        alert('Save failed: ' + err.message);
-        saveEl.textContent = 'Save';
+        saveEl.style.background = '#17a849'; saveEl.style.opacity = '';
         saveEl.disabled = false;
+        setTimeout(() => { saveEl.textContent = 'Save'; saveEl.style.background = ''; }, 3500);
+      } catch (err) {
+        saveEl.textContent = 'Save'; saveEl.style.opacity = ''; saveEl.disabled = false;
+        alert('Save failed: ' + err.message);
       }
     }
 
