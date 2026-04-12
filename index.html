@@ -2001,8 +2001,9 @@
 
       const token = (ti ? ti.value.trim() : '') || localStorage.getItem('gh-edit-token') || '';
       if (!token) {
-        saveBtn.textContent = 'Save'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
-        if (ti) { ti.focus(); ti.style.borderColor = '#e05'; setTimeout(() => { ti.style.borderColor = ''; }, 2000); }
+        saveBtn.textContent = 'Paste token in 🔑 first'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
+        setTimeout(() => { saveBtn.textContent = 'Save'; }, 3500);
+        if (ti) { ti.focus(); ti.style.outline = '1px solid #e05'; setTimeout(() => { ti.style.outline = ''; }, 3500); }
         return;
       }
       localStorage.setItem('gh-edit-token', token);
@@ -2045,10 +2046,17 @@
     saveBtn.id = 'edit-save';
     saveBtn.textContent = 'Save';
     saveBtn.style.cssText = 'border-color:#1db954!important;background:#1db954!important;color:#000!important;font-weight:700;';
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       saveBtn.textContent = '…';
-      saveBtn.style.opacity = '0.7';
-      ghPush(buildCleanHTML(), 'index.html').finally(() => { saveBtn.style.opacity = ''; });
+      saveBtn.disabled = true;
+      try {
+        const html = buildCleanHTML();
+        await ghPush(html, 'index.html');
+      } catch (err) {
+        saveBtn.textContent = 'Save';
+        saveBtn.disabled = false;
+        alert('Save error: ' + err.message);
+      }
     });
 
     // ── Copy HTML (secondary) ─────────────────────────────────────────────────

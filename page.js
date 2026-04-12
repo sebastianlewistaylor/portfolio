@@ -967,9 +967,11 @@
 
       const token = (tokenInput ? tokenInput.value.trim() : '') || localStorage.getItem('gh-edit-token') || '';
       if (!token) {
-        saveEl.textContent = 'Save'; saveEl.style.opacity = ''; saveEl.disabled = false;
-        if (tokenInput) { tokenInput.focus(); tokenInput.style.borderColor = '#e05'; }
-        setTimeout(() => { if (tokenInput) tokenInput.style.borderColor = ''; }, 2000);
+        saveEl.textContent = 'Paste token in 🔑 first';
+        saveEl.style.cssText += ';background:#333!important;color:#fff!important;';
+        saveEl.disabled = false;
+        setTimeout(() => { saveEl.textContent = 'Save'; saveEl.style.cssText = saveEl.style.cssText.replace(/;?background:[^;]+!important/g,'').replace(/;?color:[^;]+!important/g,''); }, 3500);
+        if (tokenInput) { tokenInput.focus(); tokenInput.style.outline = '2px solid #e05555'; setTimeout(() => { if (tokenInput) tokenInput.style.outline = ''; }, 3500); }
         return;
       }
       // Persist so it survives page reload
@@ -1008,13 +1010,19 @@
       }
     }
 
-    document.getElementById('edit-save').addEventListener('click', () => {
+    document.getElementById('edit-save').addEventListener('click', async () => {
       const saveEl = document.getElementById('edit-save');
       saveEl.textContent = '…';
-      saveEl.style.opacity = '0.7';
-      const html = buildCleanHTML();
-      const slug = (window.location.pathname.replace(/^\/portfolio\//, '') || 'index.html').replace(/^\//, '') || 'index.html';
-      ghPush(html, slug).finally(() => { saveEl.style.opacity = ''; });
+      saveEl.disabled = true;
+      try {
+        const html = buildCleanHTML();
+        const slug = (window.location.pathname.replace(/^\/portfolio\//, '') || 'index.html').replace(/^\//, '') || 'index.html';
+        await ghPush(html, slug);
+      } catch (err) {
+        saveEl.textContent = 'Save';
+        saveEl.disabled = false;
+        alert('Save error: ' + err.message);
+      }
     });
 
     document.getElementById('edit-copy').addEventListener('click', () => {
