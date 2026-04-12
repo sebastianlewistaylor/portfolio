@@ -2025,7 +2025,11 @@
           ov.querySelector('#_gh_cancel').onclick = () => { ov.remove(); resolve(null); };
           setTimeout(() => ov.querySelector('#_gh_tok').focus(), 50);
         });
-        if (!token) return;
+        if (!token) {
+          saveBtn.textContent = 'Save';
+          saveBtn.disabled = false;
+          return;
+        }
       }
 
       saveBtn.textContent = 'Pushing…';
@@ -2063,7 +2067,9 @@
     saveBtn.textContent = 'Save';
     saveBtn.style.cssText = 'border-color:#1db954!important;background:#1db954!important;color:#000!important;font-weight:700;';
     saveBtn.addEventListener('click', () => {
-      ghPush(buildCleanHTML(), 'index.html');
+      saveBtn.textContent = '…';
+      saveBtn.style.opacity = '0.7';
+      ghPush(buildCleanHTML(), 'index.html').finally(() => { saveBtn.style.opacity = ''; });
     });
 
     // ── Copy HTML (secondary) ─────────────────────────────────────────────────

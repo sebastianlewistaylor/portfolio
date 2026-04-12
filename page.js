@@ -986,7 +986,12 @@
           ov.querySelector('#_gh_cancel').onclick = () => { ov.remove(); resolve(null); };
           setTimeout(() => ov.querySelector('#_gh_tok').focus(), 50);
         });
-        if (!token) return;
+        if (!token) {
+          // User cancelled — reset button
+          const s = document.getElementById('edit-save');
+          if (s) { s.textContent = 'Save'; s.disabled = false; }
+          return;
+        }
       }
 
       const saveEl = document.getElementById('edit-save');
@@ -1020,9 +1025,12 @@
     }
 
     document.getElementById('edit-save').addEventListener('click', () => {
+      const saveEl = document.getElementById('edit-save');
+      saveEl.textContent = '…';
+      saveEl.style.opacity = '0.7';
       const html = buildCleanHTML();
       const slug = (window.location.pathname.replace(/^\/portfolio\//, '') || 'index.html').replace(/^\//, '') || 'index.html';
-      ghPush(html, slug);
+      ghPush(html, slug).finally(() => { saveEl.style.opacity = ''; });
     });
 
     document.getElementById('edit-copy').addEventListener('click', () => {

@@ -57,10 +57,13 @@
     toastTimer = setTimeout(function () { toast.classList.remove('visible'); }, 3000);
   }
 
-  // ── Hidden player container (off-screen but rendered for ToS) ─────────────
+  // ── Hidden player container ────────────────────────────────────────────────
+  // Positioned at bottom-left at real coordinates (not off-screen) so the
+  // browser keeps the Spotify iframe fully active/rendered. opacity:0.001 makes
+  // it imperceptible while preventing the browser from suspending it.
   var wrap = document.createElement('div');
   wrap.id = 'yt-music-wrap'; // same ID kept so router.js persistence list works
-  wrap.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:80px;pointer-events:none;z-index:1;';
+  wrap.style.cssText = 'position:fixed;bottom:0;left:0;width:300px;height:152px;opacity:0.001;pointer-events:none;z-index:-1;overflow:hidden;';
   var playerEl = document.createElement('div');
   playerEl.id = 'yt-music-player';
   wrap.appendChild(playerEl);
@@ -125,8 +128,21 @@
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
+    // Immediate visual pulse so the user knows the tap registered
+    btn.style.opacity = '0.4';
+    setTimeout(function () { btn.style.opacity = ''; }, 120);
+
     if (!controller || !controllerReady) {
-      showToast('Set a Spotify playlist in edit mode (♪ Set)');
+      if (!storedUri()) {
+        showToast('Set a Spotify playlist in edit mode (♪ Set)');
+      } else {
+        // URI is configured but controller still loading — mark intent so it
+        // auto-plays as soon as onSpotifyIframeApiReady fires
+        userWantsPlaying = true;
+        sessionStorage.setItem('music-state', 'playing');
+        ring.style.background = makeRingGradient();
+        showToast('Connecting…');
+      }
       return;
     }
     if (isPlaying) {
