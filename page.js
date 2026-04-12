@@ -788,21 +788,65 @@
 
     // ── Add/remove gallery images ──────────────────────────────────────────
     document.querySelectorAll('.p-images').forEach(container => {
-      // Add image button after each p-images block
       const addBtn = document.createElement('button');
       addBtn.textContent = '+ Add Image';
-      addBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:4px 12px;cursor:pointer;font-family:inherit;display:block;margin:6px 0;';
+      addBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.35);background:transparent;color:#c8c2f5;padding:4px 12px;cursor:pointer;font-family:inherit;display:block;margin:6px 0;';
+
       addBtn.addEventListener('click', () => {
-        const url = prompt('Image URL:', '');
-        if (!url) return;
-        const img = document.createElement('img');
-        img.src = url; img.alt = ''; img.loading = 'lazy';
-        img.dataset.editTarget = 'image';
-        img.title = 'Click: edit  |  Right-click: remove';
-        img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
-        img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
-        container.appendChild(img);
+        // Toggle panel
+        const existing = addBtn.nextElementSibling;
+        if (existing && existing.classList.contains('edit-add-img-panel')) { existing.remove(); return; }
+
+        const panel = document.createElement('div');
+        panel.className = 'edit-add-img-panel';
+        panel.style.cssText = 'background:#0c0c0c;border:1px solid rgba(200,194,245,0.25);padding:12px 14px;display:flex;flex-direction:column;gap:9px;font-family:Helvetica Neue,sans-serif;margin-bottom:6px;';
+        panel.innerHTML = `
+          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;">
+            Upload file
+            <input type="file" accept="image/*" style="font-size:10px;color:#f0ede8;flex:1;cursor:pointer;">
+          </label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Or URL</span>
+            <input type="text" placeholder="https://…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
+            <button class="eip-add-ok" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.4);background:transparent;color:#c8c2f5;padding:4px 10px;cursor:pointer;font-family:inherit;">Add</button>
+          </div>
+        `;
+
+        function wireImg(img) {
+          img.alt = ''; img.loading = 'lazy';
+          img.dataset.editTarget = 'image';
+          img.title = 'Click: edit  |  Right-click: remove';
+          img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
+          img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+          container.appendChild(img);
+          panel.remove();
+        }
+
+        panel.querySelector('input[type="file"]').addEventListener('change', function () {
+          const file = this.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = e => { const img = document.createElement('img'); img.src = e.target.result; wireImg(img); };
+          reader.readAsDataURL(file);
+        });
+
+        const urlInput = panel.querySelector('.eip-add-url');
+        panel.querySelector('.eip-add-ok').addEventListener('click', () => {
+          const src = urlInput.value.trim();
+          if (!src) return;
+          const img = document.createElement('img');
+          img.src = src;
+          wireImg(img);
+        });
+        urlInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { const src = urlInput.value.trim(); if (src) { const img = document.createElement('img'); img.src = src; wireImg(img); } }
+        });
+
+        addBtn.after(panel);
+        urlInput.focus();
       });
+
       container.after(addBtn);
 
       // Right-click to remove existing images
@@ -886,7 +930,10 @@
       const clone = document.documentElement.cloneNode(true);
       clone.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
       clone.querySelectorAll('[data-edit-target]').forEach(el => el.removeAttribute('data-edit-target'));
-      clone.querySelectorAll('.edit-layout-bar, button[style*="Add Image"], button[style*="+ Row"]').forEach(el => el.remove());
+      clone.querySelectorAll('.edit-layout-bar, .edit-add-img-panel').forEach(el => el.remove());
+      clone.querySelectorAll('button.edit-add-img-btn-outer, button[style*="+ Row"]').forEach(el => el.remove());
+      // Strip runtime-injected music player elements (created by music.js, not in static HTML)
+      ['music-btn','music-ring','music-toast','yt-music-wrap'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
       clone.querySelectorAll('.p-hero-wrapper').forEach(wrapper => {
         const hero = wrapper.querySelector('.p-hero');
         if (hero) { hero.style.position = ''; hero.style.top = ''; hero.style.height = ''; wrapper.replaceWith(hero); }
@@ -908,17 +955,74 @@
       return '<!DOCTYPE html>\n' + clone.outerHTML;
     }
 
+    // ── GitHub API push (publishes directly to the repo) ──────────────────
+    async function ghPush(html, filename) {
+      const REPO = 'sebastianlewistaylor/portfolio';
+      let token = localStorage.getItem('gh-edit-token');
+
+      if (!token) {
+        token = await new Promise(resolve => {
+          const ov = document.createElement('div');
+          ov.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;';
+          ov.innerHTML = `<div style="background:#0c0c0c;border:1px solid rgba(200,194,245,0.4);padding:28px 32px;width:420px;max-width:90vw;font-family:Helvetica Neue,sans-serif;">
+            <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#c8c2f5;margin-bottom:14px;">GitHub Token Required</div>
+            <div style="font-size:11px;color:rgba(240,237,232,0.5);margin-bottom:6px;line-height:1.7;">
+              Create a token at <code style="color:#c8c2f5;">github.com/settings/tokens</code><br>
+              → Generate new token (classic) → select <code style="color:#c8c2f5;">repo</code> scope
+            </div>
+            <div style="font-size:10px;color:rgba(240,237,232,0.3);margin-bottom:14px;">Stored in your browser only. Never leaves this device.</div>
+            <input id="_gh_tok" placeholder="ghp_…" style="width:100%;box-sizing:border-box;background:transparent;border:1px solid rgba(240,237,232,0.2);color:#f0ede8;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;margin-bottom:14px;">
+            <div style="display:flex;gap:8px;">
+              <button id="_gh_ok" style="flex:1;padding:8px;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;background:#1db954;border:none;color:#000;cursor:pointer;font-weight:700;">Save & Publish</button>
+              <button id="_gh_cancel" style="padding:8px 14px;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;background:transparent;border:1px solid rgba(240,237,232,0.2);color:#f0ede8;cursor:pointer;">Cancel</button>
+            </div>
+          </div>`;
+          document.body.appendChild(ov);
+          ov.querySelector('#_gh_ok').onclick = () => {
+            const t = ov.querySelector('#_gh_tok').value.trim();
+            if (t) localStorage.setItem('gh-edit-token', t);
+            ov.remove(); resolve(t || null);
+          };
+          ov.querySelector('#_gh_cancel').onclick = () => { ov.remove(); resolve(null); };
+          setTimeout(() => ov.querySelector('#_gh_tok').focus(), 50);
+        });
+        if (!token) return;
+      }
+
+      const saveEl = document.getElementById('edit-save');
+      saveEl.textContent = 'Pushing…';
+      saveEl.disabled = true;
+
+      try {
+        const apiUrl = `https://api.github.com/repos/${REPO}/contents/${filename}`;
+        const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+
+        const getRes = await fetch(apiUrl, { headers });
+        if (getRes.status === 401) { localStorage.removeItem('gh-edit-token'); throw new Error('Token invalid — enter it again'); }
+        if (!getRes.ok) throw new Error('Could not read file (HTTP ' + getRes.status + ')');
+        const fileData = await getRes.json();
+
+        const encoded = btoa(unescape(encodeURIComponent(html)));
+        const putRes  = await fetch(apiUrl, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ message: 'Update ' + filename + ' via edit mode', content: encoded, sha: fileData.sha })
+        });
+        if (!putRes.ok) { const e = await putRes.json(); throw new Error(e.message || 'Push failed'); }
+
+        saveEl.textContent = 'Published ✓';
+        saveEl.style.background = '#17a849';
+        setTimeout(() => { saveEl.textContent = 'Save'; saveEl.style.background = ''; saveEl.disabled = false; }, 3000);
+      } catch (err) {
+        alert('Save failed: ' + err.message);
+        saveEl.textContent = 'Save';
+        saveEl.disabled = false;
+      }
+    }
+
     document.getElementById('edit-save').addEventListener('click', () => {
       const html = buildCleanHTML();
-      const slug = window.location.pathname.split('/').pop() || 'page.html';
-      const blob = new Blob([html], { type: 'text/html' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = slug;
-      a.click();
-      URL.revokeObjectURL(url);
-      document.getElementById('edit-save').textContent = 'Saved ✓';
-      setTimeout(() => { const s = document.getElementById('edit-save'); if (s) s.textContent = 'Save'; }, 2000);
+      const slug = (window.location.pathname.replace(/^\/portfolio\//, '') || 'index.html').replace(/^\//, '') || 'index.html';
+      ghPush(html, slug);
     });
 
     document.getElementById('edit-copy').addEventListener('click', () => {
