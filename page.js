@@ -984,10 +984,13 @@
         const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
 
         const getRes = await fetch(apiUrl, { headers });
-        if (getRes.status === 401) {
+        if (getRes.status === 401 || getRes.status === 403) {
           localStorage.removeItem('gh-edit-token');
-          if (tokenInput) { tokenInput.value = ''; tokenInput.style.borderColor = '#e05'; setTimeout(() => { tokenInput.style.borderColor = ''; }, 2000); }
-          saveEl.textContent = 'Save'; saveEl.style.opacity = ''; saveEl.disabled = false;
+          if (tokenInput) { tokenInput.value = ''; tokenInput.style.outline = '2px solid #e05555'; setTimeout(() => { tokenInput.style.outline = ''; }, 4000); tokenInput.focus(); }
+          saveEl.textContent = 'Token invalid — re-enter 🔑';
+          saveEl.style.cssText += ';background:#c0392b!important;color:#fff!important;';
+          saveEl.disabled = false;
+          setTimeout(() => { saveEl.textContent = 'Save'; saveEl.style.cssText = saveEl.style.cssText.replace(/;?background:[^;]+!important/g,'').replace(/;?color:[^;]+!important/g,''); }, 4000);
           return;
         }
         if (!getRes.ok) throw new Error('GitHub HTTP ' + getRes.status);
