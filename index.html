@@ -2017,7 +2017,49 @@
     addPageBtn.addEventListener('click', showAddPageDialog);
     sizeUp.addEventListener('click', () => adjustFontSize(1));
     sizeDn.addEventListener('click', () => adjustFontSize(-1));
-    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), copyBtn, exitBtn]
+    // ── Color controls ────────────────────────────────────────────────────────
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function makeColorPicker(label, variable) {
+      const wrap = document.createElement('label');
+      wrap.title = variable;
+      wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;';
+      const txt = document.createElement('span');
+      txt.textContent = label;
+      txt.style.cssText = 'font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,237,232,0.4);';
+      const picker = document.createElement('input');
+      picker.type = 'color';
+      // Resolve rgb/hsl values that can't go straight into color input
+      const raw = cssVar(variable);
+      try { picker.value = raw.startsWith('#') ? raw : '#0c0c0c'; } catch(e) {}
+      picker.style.cssText = 'width:24px;height:20px;padding:1px;border:1px solid rgba(240,237,232,0.12);background:transparent;cursor:pointer;';
+      picker.addEventListener('input', () => {
+        document.documentElement.style.setProperty(variable, picker.value);
+        // Also update --border when bg changes so it stays proportional
+        if (variable === '--bg') {
+          // keep border as a semi-transparent version of fg
+        }
+        // Persist in the root style block so Copy HTML captures it
+        const rootStyle = document.querySelector('style');
+        if (rootStyle && rootStyle.textContent.includes(variable)) {
+          rootStyle.textContent = rootStyle.textContent.replace(
+            new RegExp(variable + '\\s*:[^;]+;'),
+            variable + ': ' + picker.value + ';'
+          );
+        }
+      });
+      wrap.appendChild(txt); wrap.appendChild(picker);
+      return wrap;
+    }
+
+    const colorSep = sep();
+    const bgPicker     = makeColorPicker('BG',     '--bg');
+    const fgPicker     = makeColorPicker('Text',   '--fg');
+    const mutedPicker  = makeColorPicker('Muted',  '--muted');
+    const accentPicker = makeColorPicker('Accent', '--accent');
+
+    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), copyBtn, exitBtn]
       .forEach(el => bar.appendChild(el));
     document.body.appendChild(bar);
 

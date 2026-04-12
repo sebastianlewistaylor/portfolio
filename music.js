@@ -103,7 +103,8 @@
   // ── Player init ────────────────────────────────────────────────
   function initPlayer() {
     player = new YT.Player('yt-music-player', {
-      width: 200,
+      host:   'https://www.youtube-nocookie.com',
+      width:  200,
       height: 113,
       videoId: storedVid(),
       playerVars: {
