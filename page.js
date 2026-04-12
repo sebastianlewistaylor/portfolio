@@ -852,11 +852,11 @@
       <span class="edit-label">Edit Mode</span>
       <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;">Accent</span>
       <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;margin-left:8px;">Music</span>
-      <input id="edit-music-url" placeholder="YouTube URL or video ID"
+      <input id="edit-music-url" placeholder="Spotify playlist URL"
         style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:220px;"
-        value="${localStorage.getItem('music-vid') ? 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') : ''}">
+        value="${localStorage.getItem('music-uri') || ''}">
       <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
-      <button id="edit-save" style="border-color:rgba(200,194,245,0.7);color:#c8c2f5;font-weight:600;">Save</button>
+      <button id="edit-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid #1db954;background:#1db954;color:#000;padding:4px 14px;cursor:pointer;font-family:inherit;font-weight:700;">Save</button>
       <button id="edit-copy">Copy</button>
       <button id="edit-close">Exit</button>
     `;
@@ -867,11 +867,18 @@
 
     document.getElementById('edit-music-save').addEventListener('click', () => {
       const raw = document.getElementById('edit-music-url').value.trim();
-      const vidMatch  = raw.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
-      const listMatch = raw.match(/[?&]list=([^&\s]+)/);
-      const vid  = vidMatch  ? vidMatch[1]  : raw.replace(/\s/g,'');
-      const list = listMatch ? listMatch[1] : vid;
-      if (vid && window._musicPlayer) window._musicPlayer.updateUrl(vid, list);
+      if (!raw) return;
+      const urlMatch = raw.match(/spotify\.com\/(?:playlist|album|track)\/([A-Za-z0-9]+)/);
+      const uriMatch = raw.match(/^spotify:[a-z]+:[A-Za-z0-9]+$/);
+      let uri = raw;
+      if (urlMatch) {
+        const type = raw.match(/spotify\.com\/(playlist|album|track)\//)[1];
+        uri = 'spotify:' + type + ':' + urlMatch[1];
+      } else if (!uriMatch) {
+        uri = 'spotify:playlist:' + raw.replace(/\s/g, '');
+      }
+      if (window._musicPlayer) window._musicPlayer.updateUri(uri);
+      else localStorage.setItem('music-uri', uri);
     });
 
     function buildCleanHTML() {
