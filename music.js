@@ -184,11 +184,13 @@
       userWantsPlaying = true;
       sessionStorage.setItem('music-state', 'playing');
       try { controller.nextTrack(); } catch (err) {}
+      setTimeout(function () { try { controller.play(); } catch (e) {} }, 300);
     } else {
       if (!controller || !controllerReady) return;
       userWantsPlaying = true;
       sessionStorage.setItem('music-state', 'playing');
       try { controller.previousTrack(); } catch (err) {}
+      setTimeout(function () { try { controller.play(); } catch (e) {} }, 300);
     }
   });
 
