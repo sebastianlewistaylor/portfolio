@@ -724,7 +724,7 @@
       .nav-links { display: none; }
     }
   </style>
-<script type="text/javascript" id="spotify-iframeapi-script" src="https://embed-cdn.spotifycdn.com/_next/static/iframe_api.7361590900b57700c029.js" async=""></script><script type="text/javascript" id="spotify-iframeapi-script" src="https://embed-cdn.spotifycdn.com/_next/static/iframe_api.7361590900b57700c029.js" async=""></script><script src="https://open.spotify.com/embed/iframe-api/v1"></script></head>
+</head>
 <body class="" style="">
 
 <!-- Splash -->
@@ -1951,7 +1951,7 @@
     // ── Spotify playlist config ──────────────────────────────────────────────
     const musicInput = document.createElement('input');
     musicInput.id = 'edit-music-url';
-    musicInput.placeholder = 'Spotify playlist URL';
+    musicInput.placeholder = 'Spotify or YouTube URL';
     musicInput.style.width = '200px';
     if (localStorage.getItem('music-uri'))
       musicInput.value = localStorage.getItem('music-uri');
@@ -1961,18 +1961,9 @@
     musicApply.addEventListener('click', () => {
       const raw = musicInput.value.trim();
       if (!raw) return;
-      // Accept full Spotify URL (open.spotify.com/playlist/ID) or URI (spotify:playlist:ID)
-      const urlMatch = raw.match(/spotify\.com\/(?:playlist|album|track)\/([A-Za-z0-9]+)/);
-      const uriMatch = raw.match(/^spotify:[a-z]+:[A-Za-z0-9]+$/);
-      let uri = raw;
-      if (urlMatch) {
-        const type = raw.match(/spotify\.com\/(playlist|album|track)\//)[1];
-        uri = 'spotify:' + type + ':' + urlMatch[1];
-      } else if (!uriMatch) {
-        uri = 'spotify:playlist:' + raw.replace(/\s/g, '');
-      }
-      if (window._musicPlayer) window._musicPlayer.updateUri(uri);
-      else localStorage.setItem('music-uri', uri);
+      // Pass through as-is — music.js detectType() handles Spotify URIs/URLs and YouTube URLs/IDs
+      if (window._musicPlayer) window._musicPlayer.updateUri(raw);
+      else localStorage.setItem('music-uri', raw);
       musicApply.textContent = 'Set ✓';
       setTimeout(() => { musicApply.textContent = '♪ Set'; }, 2000);
     });

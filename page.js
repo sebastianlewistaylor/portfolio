@@ -896,7 +896,7 @@
       <span class="edit-label">Edit Mode</span>
       <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;">Accent</span>
       <span style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#444;margin-left:8px;">Music</span>
-      <input id="edit-music-url" placeholder="Spotify playlist URL"
+      <input id="edit-music-url" placeholder="Spotify or YouTube URL"
         style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:180px;"
         value="${localStorage.getItem('music-uri') || ''}">
       <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
@@ -916,17 +916,9 @@
     document.getElementById('edit-music-save').addEventListener('click', () => {
       const raw = document.getElementById('edit-music-url').value.trim();
       if (!raw) return;
-      const urlMatch = raw.match(/spotify\.com\/(?:playlist|album|track)\/([A-Za-z0-9]+)/);
-      const uriMatch = raw.match(/^spotify:[a-z]+:[A-Za-z0-9]+$/);
-      let uri = raw;
-      if (urlMatch) {
-        const type = raw.match(/spotify\.com\/(playlist|album|track)\//)[1];
-        uri = 'spotify:' + type + ':' + urlMatch[1];
-      } else if (!uriMatch) {
-        uri = 'spotify:playlist:' + raw.replace(/\s/g, '');
-      }
-      if (window._musicPlayer) window._musicPlayer.updateUri(uri);
-      else localStorage.setItem('music-uri', uri);
+      // Pass through as-is — music.js detectType() handles Spotify URIs/URLs and YouTube URLs/IDs
+      if (window._musicPlayer) window._musicPlayer.updateUri(raw);
+      else localStorage.setItem('music-uri', raw);
     });
 
     function buildCleanHTML() {

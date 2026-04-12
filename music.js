@@ -1,50 +1,70 @@
-// music.js — ambient background music player using Spotify Embed iFrame API
-// Included on every page. Spotify iFrame API loaded here.
-
+// music.js — ambient background music: auto-detects Spotify or YouTube from stored URI
 (function () {
-  // Guard: runs exactly once. Back-navigation re-executes scripts but this prevents a second player.
   if (window._musicPlayer) return;
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function storedUri() { return localStorage.getItem('music-uri') || ''; }
 
-  // ── Pastel color generator (same as transition splash) ────────────────────
+  function detectType(uri) {
+    if (!uri) return null;
+    if (uri.startsWith('spotify:') || /spotify\.com/.test(uri)) return 'spotify';
+    if (/youtube\.com|youtu\.be/.test(uri) || /^[A-Za-z0-9_-]{11}$/.test(uri)) return 'youtube';
+    return null;
+  }
+
+  function parseYouTube(uri) {
+    // Returns { videoId, listId }
+    var videoId = null, listId = null;
+    var u;
+    try { u = new URL(uri); } catch (e) { u = null; }
+    if (u) {
+      videoId = u.searchParams.get('v') || null;
+      listId  = u.searchParams.get('list') || null;
+      if (!videoId && u.hostname === 'youtu.be') videoId = u.pathname.slice(1);
+    } else if (/^[A-Za-z0-9_-]{11}$/.test(uri)) {
+      videoId = uri;
+    }
+    return { videoId: videoId || 'DcNLfwlXGqw', listId };
+  }
+
+  function toSpotifyUri(raw) {
+    var urlMatch = raw.match(/spotify\.com\/(?:playlist|album|track)\/([A-Za-z0-9]+)/);
+    if (urlMatch) {
+      var type = raw.match(/spotify\.com\/(playlist|album|track)\//)[1];
+      return 'spotify:' + type + ':' + urlMatch[1];
+    }
+    if (/^spotify:[a-z]+:[A-Za-z0-9]+$/.test(raw)) return raw;
+    return null;
+  }
+
+  // ── Ring & toast ───────────────────────────────────────────────────────────
   function randColor() {
-    var h = Math.random() * 360;
-    var s = 55 + Math.random() * 30;
-    var l = 72 + Math.random() * 14;
+    var h = Math.random() * 360, s = 55 + Math.random() * 30, l = 72 + Math.random() * 14;
     return 'hsl(' + h + ',' + s + '%,' + l + '%)';
   }
   function makeRingGradient() {
-    var colors = [randColor(), randColor(), randColor(), randColor()];
-    return 'conic-gradient(' + colors.join(',') + ',' + colors[0] + ')';
+    var c = [randColor(), randColor(), randColor(), randColor()];
+    return 'conic-gradient(' + c.join(',') + ',' + c[0] + ')';
   }
 
-  // ── Button ─────────────────────────────────────────────────────────────────
   var btn = document.createElement('button');
   btn.id = 'music-btn';
   btn.setAttribute('aria-label', 'Toggle music');
   btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 1L5.5 3.5V10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3.5" cy="10.5" r="2" fill="currentColor"/><circle cx="11" cy="8.5" r="2" fill="currentColor"/></svg>';
   document.body.appendChild(btn);
 
-  // ── Gradient ring ──────────────────────────────────────────────────────────
   var ring = document.createElement('div');
   ring.id = 'music-ring';
   document.body.appendChild(ring);
 
   function positionRing() {
     var r = btn.getBoundingClientRect();
-    var rw = 64, rh = 64;
-    ring.style.left = Math.round(r.left - (rw - r.width) / 2) + 'px';
-    ring.style.top  = Math.round(r.top  - (rh - r.height) / 2) + 'px';
+    ring.style.left = Math.round(r.left - (64 - r.width) / 2) + 'px';
+    ring.style.top  = Math.round(r.top  - (64 - r.height) / 2) + 'px';
   }
-  function showRing() {
-    ring.style.background = makeRingGradient();
-    positionRing();
-    ring.classList.add('visible');
-  }
+  function showRing() { ring.style.background = makeRingGradient(); positionRing(); ring.classList.add('visible'); }
   function hideRing() { ring.classList.remove('visible'); }
 
-  // ── Song name toast ────────────────────────────────────────────────────────
   var toast = document.createElement('div');
   toast.id = 'music-toast';
   document.body.appendChild(toast);
@@ -57,12 +77,9 @@
     toastTimer = setTimeout(function () { toast.classList.remove('visible'); }, 3000);
   }
 
-  // ── Hidden player container ────────────────────────────────────────────────
-  // Positioned at bottom-left at real coordinates (not off-screen) so the
-  // browser keeps the Spotify iframe fully active/rendered. opacity:0.001 makes
-  // it imperceptible while preventing the browser from suspending it.
+  // ── Shared player container ────────────────────────────────────────────────
   var wrap = document.createElement('div');
-  wrap.id = 'yt-music-wrap'; // same ID kept so router.js persistence list works
+  wrap.id = 'yt-music-wrap';
   wrap.style.cssText = 'position:fixed;bottom:0;left:0;width:300px;height:152px;opacity:0.001;pointer-events:none;z-index:-1;overflow:hidden;';
   var playerEl = document.createElement('div');
   playerEl.id = 'yt-music-player';
@@ -70,74 +87,138 @@
   document.body.appendChild(wrap);
 
   // ── State ──────────────────────────────────────────────────────────────────
-  var _IFrameAPI      = null;
-  var controller      = null;
-  var controllerReady = false;
-  var isPlaying       = false;
+  var isPlaying        = false;
   var userWantsPlaying = sessionStorage.getItem('music-state') === 'playing';
+  var activeType       = null; // 'spotify' | 'youtube'
+
+  // Spotify
+  var _IFrameAPI   = null;
+  var spController = null;
+  var spReady      = false;
+
+  // YouTube
+  var ytPlayer     = null;
+  var ytReady      = false;
 
   function updateBtn() {
     if (isPlaying) { btn.classList.add('playing'); showRing(); }
-    else { btn.classList.remove('playing'); hideRing(); }
+    else           { btn.classList.remove('playing'); hideRing(); }
   }
 
-  // ── Create Spotify controller ──────────────────────────────────────────────
-  function initController(uri) {
+  // ── Spotify ────────────────────────────────────────────────────────────────
+  function initSpotify(uri) {
     if (!_IFrameAPI || !uri) return;
-    // Destroy previous controller if reinitialising
-    controller = null;
-    controllerReady = false;
+    spController = null; spReady = false;
     playerEl.innerHTML = '';
 
     _IFrameAPI.createController(playerEl, { uri: uri, width: 200, height: 80 }, function (c) {
-      controller = c;
-      controllerReady = true;
-
+      spController = c; spReady = true;
       c.addListener('playback_update', function (e) {
-        var wasPlaying = isPlaying;
         isPlaying = !e.data.isPaused;
         updateBtn();
-        // Unexpected pause rescue
         if (e.data.isPaused && userWantsPlaying) {
           setTimeout(function () {
-            if (userWantsPlaying && controller && !isPlaying) {
-              try { controller.play(); } catch (err) {}
-            }
+            if (userWantsPlaying && spController && !isPlaying) { try { spController.play(); } catch (err) {} }
           }, 100);
         }
       });
-
-      if (userWantsPlaying) {
-        try { c.play(); } catch (err) {}
-      }
+      if (userWantsPlaying) { try { c.play(); } catch (e) {} }
     });
   }
 
-  // ── Load Spotify iFrame API ────────────────────────────────────────────────
-  window.onSpotifyIframeApiReady = function (IFrameAPI) {
-    _IFrameAPI = IFrameAPI;
-    var uri = storedUri();
-    if (uri) initController(uri);
+  function ensureSpotifyApi(cb) {
+    if (_IFrameAPI) { cb(); return; }
+    window.onSpotifyIframeApiReady = function (api) { _IFrameAPI = api; cb(); };
+    if (!document.querySelector('script[src*="spotify.com/embed/iframe-api"]')) {
+      var s = document.createElement('script');
+      s.src = 'https://open.spotify.com/embed/iframe-api/v1';
+      document.head.appendChild(s);
+    }
+  }
+
+  window.onSpotifyIframeApiReady = function (api) {
+    _IFrameAPI = api;
+    if (activeType === 'spotify') initSpotify(toSpotifyUri(storedUri()));
   };
 
-  if (!document.querySelector('script[src*="spotify.com/embed/iframe-api"]')) {
-    var s = document.createElement('script');
-    s.src = 'https://open.spotify.com/embed/iframe-api/v1';
-    document.head.appendChild(s);
+  // ── YouTube ────────────────────────────────────────────────────────────────
+  function initYouTube(uri) {
+    playerEl.innerHTML = '';
+    ytPlayer = null; ytReady = false;
+    var parsed = parseYouTube(uri);
+
+    function createPlayer() {
+      var opts = {
+        videoId: parsed.videoId,
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1 },
+        events: {
+          onReady: function (e) {
+            ytReady = true;
+            if (parsed.listId) e.target.cuePlaylist({ list: parsed.listId, listType: 'playlist' });
+            if (userWantsPlaying) { e.target.playVideo(); }
+          },
+          onStateChange: function (e) {
+            var YT = window.YT;
+            if (!YT) return;
+            var wasPlaying = isPlaying;
+            isPlaying = (e.data === YT.PlayerState.PLAYING);
+            updateBtn();
+            if (isPlaying && !wasPlaying) {
+              try { showToast(ytPlayer.getVideoData().title); } catch (err) {}
+            }
+          },
+        }
+      };
+      ytPlayer = new window.YT.Player(playerEl, opts);
+    }
+
+    if (window.YT && window.YT.Player) {
+      createPlayer();
+    } else {
+      window._ytMusicQueue = window._ytMusicQueue || [];
+      window._ytMusicQueue.push(createPlayer);
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        var s = document.createElement('script');
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+        window.onYouTubeIframeAPIReady = function () {
+          (window._ytMusicQueue || []).forEach(function (fn) { fn(); });
+          window._ytMusicQueue = [];
+        };
+      }
+    }
   }
+
+  // ── Bootstrap from stored URI ──────────────────────────────────────────────
+  function bootPlayer(uri) {
+    var type = detectType(uri);
+    if (!type) return;
+    activeType = type;
+    // Tear down whichever player is not needed
+    if (type === 'spotify') {
+      ytPlayer = null; ytReady = false;
+      ensureSpotifyApi(function () { initSpotify(toSpotifyUri(uri)); });
+    } else {
+      spController = null; spReady = false;
+      initYouTube(uri);
+    }
+  }
+
+  var _stored = storedUri();
+  if (_stored) bootPlayer(_stored);
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
-    // Immediate visual pulse so the user knows the tap registered
     btn.style.opacity = '0.4';
     setTimeout(function () { btn.style.opacity = ''; }, 120);
 
-    if (!controller || !controllerReady) {
+    var ready = (activeType === 'spotify' && spController && spReady) ||
+                (activeType === 'youtube' && ytPlayer && ytReady);
+
+    if (!ready) {
       if (!storedUri()) {
-        showToast('Set a Spotify playlist in edit mode (♪ Set)');
+        showToast('Paste a Spotify or YouTube URL in edit mode (♪ Set)');
       } else {
-        // URI is configured but controller still loading — mark intent so it
-        // auto-plays as soon as onSpotifyIframeApiReady fires
         userWantsPlaying = true;
         sessionStorage.setItem('music-state', 'playing');
         ring.style.background = makeRingGradient();
@@ -145,78 +226,67 @@
       }
       return;
     }
+
     if (isPlaying) {
       userWantsPlaying = false;
       sessionStorage.setItem('music-state', 'paused');
-      controller.pause();
+      if (activeType === 'spotify') { try { spController.pause(); } catch (e) {} }
+      else { try { ytPlayer.pauseVideo(); } catch (e) {} }
     } else {
       userWantsPlaying = true;
       sessionStorage.setItem('music-state', 'playing');
       ring.style.background = makeRingGradient();
-      controller.play();
+      if (activeType === 'spotify') { try { spController.play(); } catch (e) {} }
+      else { try { ytPlayer.playVideo(); } catch (e) {} }
     }
   });
 
-  // ── Keep ring aligned on resize ────────────────────────────────────────────
-  window.addEventListener('resize', function () { if (isPlaying) positionRing(); });
-
   // ── Keyboard controls ──────────────────────────────────────────────────────
-  // M / MediaPlayPause     → toggle
-  // . / MediaTrackNext     → next track
-  // , / MediaTrackPrevious → previous track
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     var active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
-
-    // Media keys report in e.key (e.code is '' for them); regular keys use e.code
-    var isToggle  = e.code === 'KeyM'    || e.key === 'MediaPlayPause';
-    var isNext    = e.code === 'Period'  || e.key === 'MediaTrackNext';
-    var isPrev    = e.code === 'Comma'   || e.key === 'MediaTrackPrevious';
-
+    var isToggle = e.code === 'KeyM'   || e.key === 'MediaPlayPause';
+    var isNext   = e.code === 'Period' || e.key === 'MediaTrackNext';
+    var isPrev   = e.code === 'Comma'  || e.key === 'MediaTrackPrevious';
     if (!isToggle && !isNext && !isPrev) return;
     e.preventDefault();
-
-    if (isToggle) {
-      btn.click(); // exact same action as tapping the music button
-    } else if (isNext) {
-      if (!controller || !controllerReady) return;
-      userWantsPlaying = true;
-      sessionStorage.setItem('music-state', 'playing');
-      try { controller.nextTrack(); } catch (err) {}
-      setTimeout(function () { try { controller.play(); } catch (e) {} }, 300);
-    } else {
-      if (!controller || !controllerReady) return;
-      userWantsPlaying = true;
-      sessionStorage.setItem('music-state', 'playing');
-      try { controller.previousTrack(); } catch (err) {}
-      setTimeout(function () { try { controller.play(); } catch (e) {} }, 300);
+    if (isToggle) { btn.click(); return; }
+    userWantsPlaying = true;
+    sessionStorage.setItem('music-state', 'playing');
+    if (activeType === 'spotify' && spController && spReady) {
+      try { if (isNext) spController.nextTrack(); else spController.previousTrack(); } catch (e) {}
+      setTimeout(function () { try { spController.play(); } catch (e) {} }, 300);
+    } else if (activeType === 'youtube' && ytPlayer && ytReady) {
+      try { if (isNext) ytPlayer.nextVideo(); else ytPlayer.previousVideo(); } catch (e) {}
     }
   });
 
-  // ── SPA navigation recovery ────────────────────────────────────────────────
+  window.addEventListener('resize', function () { if (isPlaying) positionRing(); });
+
   window.addEventListener('spa-navigated', function () {
     if (!userWantsPlaying) return;
-    setTimeout(function () { if (userWantsPlaying && controller && !isPlaying) { try { controller.play(); } catch (e) {} } }, 150);
-    setTimeout(function () { if (userWantsPlaying && controller && !isPlaying) { try { controller.play(); } catch (e) {} } }, 600);
+    setTimeout(function () {
+      if (!userWantsPlaying) return;
+      if (activeType === 'spotify' && spController && !isPlaying) { try { spController.play(); } catch (e) {} }
+      if (activeType === 'youtube' && ytPlayer && ytReady && !isPlaying) { try { ytPlayer.playVideo(); } catch (e) {} }
+    }, 150);
+    setTimeout(function () {
+      if (!userWantsPlaying) return;
+      if (activeType === 'youtube' && ytPlayer && ytReady && !isPlaying) { try { ytPlayer.playVideo(); } catch (e) {} }
+    }, 600);
   });
 
   // ── Exposed for edit mode ──────────────────────────────────────────────────
   window._musicPlayer = {
-    // uri: full Spotify URI, e.g. "spotify:playlist:37i9dQZXXX" or playlist URL
     updateUri: function (uri) {
       localStorage.setItem('music-uri', uri);
-      if (controller && controllerReady) {
-        try { controller.loadUri(uri); if (!isPlaying) controller.pause(); }
-        catch (e) { initController(uri); }
-      } else {
-        initController(uri);
-      }
+      bootPlayer(uri);
     },
     resume: function () {
-      if (userWantsPlaying && controller && controllerReady && !isPlaying) {
-        try { controller.play(); } catch (e) {}
-      }
+      if (!userWantsPlaying) return;
+      if (activeType === 'spotify' && spController && spReady && !isPlaying) { try { spController.play(); } catch (e) {} }
+      if (activeType === 'youtube' && ytPlayer && ytReady && !isPlaying) { try { ytPlayer.playVideo(); } catch (e) {} }
     },
   };
 })();
