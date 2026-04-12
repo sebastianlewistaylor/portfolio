@@ -2008,8 +2008,65 @@
       return '<!DOCTYPE html>\n' + clone.outerHTML;
     }
 
+    // ── Apply user edits to a clean parsed document ───────────────────────────
+    // Instead of cloning the live DOM (which carries GSAP/Lenis runtime state),
+    // we start from the original HTML fetched from GitHub and only patch the
+    // things the user actually changed.
+    function applyEdits(origDoc) {
+      // Text fields — match by selector + position index
+      [
+        '.cursive-top', '.info-tagline', '.info-h1 .reveal-inner', '.info-bio',
+        '.cap', '.scroll-hint', '.s-label > span',
+        '.archive-title', '.archive-year',
+        '.p-title', '.p-tag', '.p-year', '.p-num',
+        '.contact-h .reveal-inner', '.ticker-item',
+        'nav .nav-name',
+      ].forEach(sel => {
+        const live = document.querySelectorAll(sel);
+        const orig = origDoc.querySelectorAll(sel);
+        live.forEach((el, i) => { if (orig[i]) orig[i].innerHTML = el.innerHTML; });
+      });
+
+      // Contact row hrefs (double-click edited)
+      const liveRows = document.querySelectorAll('.contact-row[href]');
+      const origRows = origDoc.querySelectorAll('.contact-row[href]');
+      liveRows.forEach((el, i) => { if (origRows[i]) origRows[i].setAttribute('href', el.getAttribute('href') || ''); });
+
+      // Structural containers — replace entire innerHTML so reorders/adds/deletes are captured
+      ['.archive-grid', '.project-list', '.ticker-inner'].forEach(sel => {
+        const liveEl = document.querySelector(sel);
+        const origEl = origDoc.querySelector(sel);
+        if (!liveEl || !origEl) return;
+        const c = liveEl.cloneNode(true);
+        // Strip edit UI injected by edit mode
+        c.querySelectorAll('button.edit-add-img-btn-outer, button.edit-img-btn, .edit-del-btn, button.edit-add-btn').forEach(b => b.remove());
+        c.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
+        c.querySelectorAll('[draggable]').forEach(el => el.removeAttribute('draggable'));
+        // Strip edit-mode runtime classes/styles from cells
+        c.querySelectorAll('.archive-cell, .project-row').forEach(el => {
+          el.classList.remove('in', 'drag-over');
+          el.style.opacity = '';
+          el.style.position = '';
+        });
+        // project-row: keep data-title up to date
+        c.querySelectorAll('.project-row').forEach(row => {
+          const t = row.querySelector('.p-title');
+          if (t) row.setAttribute('data-title', t.textContent.trim());
+        });
+        origEl.innerHTML = c.innerHTML;
+      });
+
+      // Accent color
+      const accent = document.body.dataset.accent || document.documentElement.style.getPropertyValue('--accent').trim();
+      if (accent) {
+        origDoc.body.dataset.accent = accent;
+        const styleEl = Array.from(origDoc.head.querySelectorAll('style')).find(s => s.textContent.includes('--accent'));
+        if (styleEl) styleEl.textContent = styleEl.textContent.replace(/--accent\s*:[^;]+;/, `--accent: ${accent};`);
+      }
+    }
+
     // ── GitHub API push ───────────────────────────────────────────────────────
-    async function ghPush(html, filename) {
+    async function ghPush(filename) {
       const REPO = 'sebastianlewistaylor/portfolio';
       const ti = document.getElementById('edit-gh-token');
 
@@ -2029,14 +2086,24 @@
         const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
 
         const getRes = await fetch(apiUrl, { headers });
-        if (getRes.status === 401) {
+        if (getRes.status === 401 || getRes.status === 403) {
           localStorage.removeItem('gh-edit-token');
-          if (ti) { ti.value = ''; ti.style.borderColor = '#e05'; setTimeout(() => { ti.style.borderColor = ''; }, 2000); }
-          saveBtn.textContent = 'Save'; saveBtn.style.opacity = ''; saveBtn.disabled = false;
+          if (ti) { ti.value = ''; ti.style.outline = '2px solid #e05555'; setTimeout(() => { ti.style.outline = ''; }, 4000); ti.focus(); }
+          saveBtn.textContent = 'Token invalid — re-enter 🔑';
+          saveBtn.style.cssText += ';background:#c0392b!important;color:#fff!important;';
+          saveBtn.disabled = false;
+          setTimeout(() => { saveBtn.textContent = 'Save'; saveBtn.style.cssText = saveBtn.style.cssText.replace(/;?background:[^;]+!important/g,'').replace(/;?color:[^;]+!important/g,''); }, 4000);
           return;
         }
         if (!getRes.ok) throw new Error('GitHub HTTP ' + getRes.status);
         const fileData = await getRes.json();
+
+        // Decode original HTML from GitHub, parse to clean document, apply edits
+        const bytes = Uint8Array.from(atob(fileData.content.replace(/[\r\n]/g, '')), c => c.charCodeAt(0));
+        const origHTML = new TextDecoder().decode(bytes);
+        const origDoc = new DOMParser().parseFromString(origHTML, 'text/html');
+        applyEdits(origDoc);
+        const html = '<!DOCTYPE html>\n' + origDoc.documentElement.outerHTML;
 
         const encoded = btoa(unescape(encodeURIComponent(html)));
         const putRes  = await fetch(apiUrl, {
@@ -2064,8 +2131,7 @@
       saveBtn.textContent = '…';
       saveBtn.disabled = true;
       try {
-        const html = buildCleanHTML();
-        await ghPush(html, 'index.html');
+        await ghPush('index.html');
       } catch (err) {
         saveBtn.textContent = 'Save';
         saveBtn.disabled = false;

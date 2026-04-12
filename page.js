@@ -959,8 +959,67 @@
       return '<!DOCTYPE html>\n' + clone.outerHTML;
     }
 
+    // ── Apply user edits to a clean parsed document ───────────────────────────
+    function applyEdits(origDoc) {
+      // Text fields — match by selector + position index
+      [
+        '.p-title', '.p-subtitle', '.p-body',
+        '.p-meta-label', '.p-meta-value', '.p-section-label',
+        '.p-article-title', '.p-article-meta',
+        '.p-next-title', '.p-next-label',
+        '.p-back-title', '.p-back-label',
+      ].forEach(sel => {
+        const live = document.querySelectorAll(sel);
+        const orig = origDoc.querySelectorAll(sel);
+        live.forEach((el, i) => { if (orig[i]) orig[i].innerHTML = el.innerHTML; });
+      });
+
+      // Hero image — src, focal point, zoom, fit, background
+      const liveHeroImg = document.querySelector('.p-hero img');
+      const origHeroImg = origDoc.querySelector('.p-hero img');
+      if (liveHeroImg && origHeroImg) {
+        origHeroImg.src = liveHeroImg.src;
+        ['focal','zoom'].forEach(k => { if (liveHeroImg.dataset[k]) origHeroImg.dataset[k] = liveHeroImg.dataset[k]; });
+        ['objectFit','objectPosition'].forEach(p => { if (liveHeroImg.style[p]) origHeroImg.style[p] = liveHeroImg.style[p]; else origHeroImg.style[p] = ''; });
+        const liveHero = document.querySelector('.p-hero'), origHero = origDoc.querySelector('.p-hero');
+        if (liveHero && origHero && liveHero.style.backgroundColor) origHero.style.backgroundColor = liveHero.style.backgroundColor;
+      }
+
+      // Gallery images — replace each .p-images container
+      document.querySelectorAll('.p-images').forEach((liveContainer, ci) => {
+        const origContainer = origDoc.querySelectorAll('.p-images')[ci];
+        if (!origContainer) return;
+        // Copy layout classes
+        ['grid-2','grid-3'].forEach(cls => {
+          origContainer.classList.toggle(cls, liveContainer.classList.contains(cls));
+        });
+        // Clone images, strip edit UI
+        const c = liveContainer.cloneNode(true);
+        c.querySelectorAll('.edit-layout-bar, .edit-add-img-btn-outer, button.edit-img-btn, .edit-add-img-panel').forEach(el => el.remove());
+        // Unwrap .tall-img-outer back to plain img
+        c.querySelectorAll('.tall-img-outer').forEach(outer => {
+          const img = outer.querySelector('img');
+          if (img) {
+            ['wide','span-2'].forEach(cls => { if (outer.classList.contains(cls)) img.classList.add(cls); });
+            ['width','height','left','top','position','transform'].forEach(p => img.style[p] = '');
+            delete img.dataset.tallSetup;
+            outer.replaceWith(img);
+          }
+        });
+        origContainer.innerHTML = c.innerHTML;
+      });
+
+      // Accent color
+      const accent = document.body.dataset.accent || document.documentElement.style.getPropertyValue('--accent').trim();
+      if (accent) {
+        origDoc.body.dataset.accent = accent;
+        const styleEl = Array.from(origDoc.head.querySelectorAll('style')).find(s => s.textContent.includes('--accent'));
+        if (styleEl) styleEl.textContent = styleEl.textContent.replace(/--accent\s*:[^;]+;/, `--accent: ${accent};`);
+      }
+    }
+
     // ── GitHub API push (publishes directly to the repo) ──────────────────
-    async function ghPush(html, filename) {
+    async function ghPush(filename) {
       const REPO = 'sebastianlewistaylor/portfolio';
       const saveEl = document.getElementById('edit-save');
       const tokenInput = document.getElementById('edit-gh-token');
@@ -974,7 +1033,6 @@
         if (tokenInput) { tokenInput.focus(); tokenInput.style.outline = '2px solid #e05555'; setTimeout(() => { if (tokenInput) tokenInput.style.outline = ''; }, 3500); }
         return;
       }
-      // Persist so it survives page reload
       localStorage.setItem('gh-edit-token', token);
 
       saveEl.textContent = 'Pushing…';
@@ -995,6 +1053,13 @@
         }
         if (!getRes.ok) throw new Error('GitHub HTTP ' + getRes.status);
         const fileData = await getRes.json();
+
+        // Decode original HTML from GitHub, parse to clean document, apply only user edits
+        const bytes = Uint8Array.from(atob(fileData.content.replace(/[\r\n]/g, '')), c => c.charCodeAt(0));
+        const origHTML = new TextDecoder().decode(bytes);
+        const origDoc = new DOMParser().parseFromString(origHTML, 'text/html');
+        applyEdits(origDoc);
+        const html = '<!DOCTYPE html>\n' + origDoc.documentElement.outerHTML;
 
         const encoded = btoa(unescape(encodeURIComponent(html)));
         const putRes  = await fetch(apiUrl, {
@@ -1018,9 +1083,8 @@
       saveEl.textContent = '…';
       saveEl.disabled = true;
       try {
-        const html = buildCleanHTML();
         const slug = (window.location.pathname.replace(/^\/portfolio\//, '') || 'index.html').replace(/^\//, '') || 'index.html';
-        await ghPush(html, slug);
+        await ghPush(slug);
       } catch (err) {
         saveEl.textContent = 'Save';
         saveEl.disabled = false;
