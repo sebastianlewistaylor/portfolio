@@ -1985,7 +1985,7 @@
       clone.querySelectorAll('.edit-img-btn,.edit-del-btn,.edit-add-img-panel').forEach(b => b.remove());
       clone.querySelectorAll('label.edit-add-img-btn-outer,button.edit-add-btn').forEach(b => b.remove());
       // Strip runtime-injected music player elements (created by music.js, not in static HTML)
-      ['music-btn','music-ring','music-toast','yt-music-wrap','edit-bar','edit-styles'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
+      ['music-btn','music-ring','music-toast','yt-music-wrap','edit-bar','edit-styles'].forEach(id => { const el = clone.querySelector('#' + id); if (el) el.remove(); });
       clone.querySelector('body').classList.remove('edit-mode');
       clone.querySelectorAll('.project-row').forEach(row => {
         const t = row.querySelector('.p-title');

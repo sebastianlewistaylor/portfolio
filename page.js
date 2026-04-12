@@ -937,7 +937,7 @@
       clone.querySelectorAll('.edit-layout-bar, .edit-add-img-panel').forEach(el => el.remove());
       clone.querySelectorAll('button.edit-add-img-btn-outer, button[style*="+ Row"]').forEach(el => el.remove());
       // Strip runtime-injected music player elements (created by music.js, not in static HTML)
-      ['music-btn','music-ring','music-toast','yt-music-wrap'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
+      ['music-btn','music-ring','music-toast','yt-music-wrap'].forEach(id => { const el = clone.querySelector('#' + id); if (el) el.remove(); });
       clone.querySelectorAll('.p-hero-wrapper').forEach(wrapper => {
         const hero = wrapper.querySelector('.p-hero');
         if (hero) { hero.style.position = ''; hero.style.top = ''; hero.style.height = ''; wrapper.replaceWith(hero); }
@@ -954,7 +954,7 @@
           outer.replaceWith(img);
         }
       });
-      ['edit-bar','edit-styles','edit-img-panel'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
+      ['edit-bar','edit-styles','edit-img-panel'].forEach(id => { const el = clone.querySelector('#' + id); if (el) el.remove(); });
       clone.querySelector('body').classList.remove('edit-mode');
       return '<!DOCTYPE html>\n' + clone.outerHTML;
     }
