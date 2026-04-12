@@ -1964,8 +1964,13 @@
       // Pass through as-is — music.js detectType() handles Spotify URIs/URLs and YouTube URLs/IDs
       if (window._musicPlayer) window._musicPlayer.updateUri(raw);
       else localStorage.setItem('music-uri', raw);
-      musicApply.textContent = 'Set ✓';
-      setTimeout(() => { musicApply.textContent = '♪ Set'; }, 2000);
+      musicApply.textContent = '✓';
+      musicApply.style.cssText += ';border-color:#1db954!important;color:#1db954!important;';
+      setTimeout(() => {
+        musicApply.textContent = '♪ Set';
+        musicApply.style.borderColor = '';
+        musicApply.style.color = '';
+      }, 1500);
     });
 
     // ── Shared: build clean HTML ──────────────────────────────────────────────
