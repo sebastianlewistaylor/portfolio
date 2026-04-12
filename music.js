@@ -169,28 +169,26 @@
     var active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
 
-    switch (e.code) {
-      case 'KeyM':
-      case 'MediaPlayPause':
-        e.preventDefault();
-        btn.click(); // exact same action as tapping the music button
-        break;
-      case 'Period':
-      case 'MediaTrackNext':
-        e.preventDefault();
-        if (!controller || !controllerReady) return;
-        userWantsPlaying = true;
-        sessionStorage.setItem('music-state', 'playing');
-        try { controller.nextTrack(); } catch (err) {}
-        break;
-      case 'Comma':
-      case 'MediaTrackPrevious':
-        e.preventDefault();
-        if (!controller || !controllerReady) return;
-        userWantsPlaying = true;
-        sessionStorage.setItem('music-state', 'playing');
-        try { controller.previousTrack(); } catch (err) {}
-        break;
+    // Media keys report in e.key (e.code is '' for them); regular keys use e.code
+    var isToggle  = e.code === 'KeyM'    || e.key === 'MediaPlayPause';
+    var isNext    = e.code === 'Period'  || e.key === 'MediaTrackNext';
+    var isPrev    = e.code === 'Comma'   || e.key === 'MediaTrackPrevious';
+
+    if (!isToggle && !isNext && !isPrev) return;
+    e.preventDefault();
+
+    if (isToggle) {
+      btn.click(); // exact same action as tapping the music button
+    } else if (isNext) {
+      if (!controller || !controllerReady) return;
+      userWantsPlaying = true;
+      sessionStorage.setItem('music-state', 'playing');
+      try { controller.nextTrack(); } catch (err) {}
+    } else {
+      if (!controller || !controllerReady) return;
+      userWantsPlaying = true;
+      sessionStorage.setItem('music-state', 'playing');
+      try { controller.previousTrack(); } catch (err) {}
     }
   });
 
