@@ -856,7 +856,8 @@
         style="background:transparent;border:1px solid rgba(240,237,232,0.12);color:#f0ede8;padding:3px 8px;font-size:10px;font-family:monospace;outline:none;width:220px;"
         value="${localStorage.getItem('music-vid') ? 'https://www.youtube.com/watch?v=' + localStorage.getItem('music-vid') : ''}">
       <button id="edit-music-save" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;">Set</button>
-      <button id="edit-copy">Copy HTML</button>
+      <button id="edit-save" style="border-color:rgba(200,194,245,0.7);color:#c8c2f5;font-weight:600;">Save</button>
+      <button id="edit-copy">Copy</button>
       <button id="edit-close">Exit</button>
     `;
     // Insert accent picker after "Accent" label
@@ -873,19 +874,12 @@
       if (vid && window._musicPlayer) window._musicPlayer.updateUrl(vid, list);
     });
 
-    document.getElementById('edit-copy').addEventListener('click', () => {
+    function buildCleanHTML() {
       if (imgPanel) { imgPanel.remove(); imgPanel = null; }
-
       const clone = document.documentElement.cloneNode(true);
-
-      clone.querySelectorAll('[contenteditable]').forEach(el => {
-        el.removeAttribute('contenteditable');
-        el.removeAttribute('data-edit-target');
-      });
-      clone.querySelectorAll('[data-edit-target]').forEach(el => {
-        el.removeAttribute('data-edit-target');
-      });
-      clone.querySelectorAll('.edit-layout-bar').forEach(el => el.remove());
+      clone.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
+      clone.querySelectorAll('[data-edit-target]').forEach(el => el.removeAttribute('data-edit-target'));
+      clone.querySelectorAll('.edit-layout-bar, button[style*="Add Image"], button[style*="+ Row"]').forEach(el => el.remove());
       clone.querySelectorAll('.p-hero-wrapper').forEach(wrapper => {
         const hero = wrapper.querySelector('.p-hero');
         if (hero) { hero.style.position = ''; hero.style.top = ''; hero.style.height = ''; wrapper.replaceWith(hero); }
@@ -902,23 +896,29 @@
           outer.replaceWith(img);
         }
       });
-      ['edit-bar', 'edit-styles', 'edit-img-panel'].forEach(id => {
-        const el = clone.getElementById(id);
-        if (el) el.remove();
-      });
+      ['edit-bar','edit-styles','edit-img-panel'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
       clone.querySelector('body').classList.remove('edit-mode');
+      return '<!DOCTYPE html>\n' + clone.outerHTML;
+    }
 
-      const html = '<!DOCTYPE html>\n' + clone.outerHTML;
-      const copy = btn => { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy HTML'; }, 2500); };
+    document.getElementById('edit-save').addEventListener('click', () => {
+      const html = buildCleanHTML();
+      const slug = window.location.pathname.split('/').pop() || 'page.html';
+      const blob = new Blob([html], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = slug;
+      a.click();
+      URL.revokeObjectURL(url);
+      document.getElementById('edit-save').textContent = 'Saved ✓';
+      setTimeout(() => { const s = document.getElementById('edit-save'); if (s) s.textContent = 'Save'; }, 2000);
+    });
 
+    document.getElementById('edit-copy').addEventListener('click', () => {
+      const html = buildCleanHTML();
       navigator.clipboard.writeText(html)
-        .then(() => copy(document.getElementById('edit-copy')))
-        .catch(() => {
-          const ta = document.createElement('textarea');
-          ta.value = html; document.body.appendChild(ta); ta.select();
-          document.execCommand('copy'); ta.remove();
-          copy(document.getElementById('edit-copy'));
-        });
+        .then(() => { document.getElementById('edit-copy').textContent = 'Copied!'; setTimeout(() => { const b = document.getElementById('edit-copy'); if (b) b.textContent = 'Copy'; }, 2500); })
+        .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); document.getElementById('edit-copy').textContent = 'Copied!'; setTimeout(() => { const b = document.getElementById('edit-copy'); if (b) b.textContent = 'Copy'; }, 2500); });
     });
 
     document.getElementById('edit-close').addEventListener('click', () => {

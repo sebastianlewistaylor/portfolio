@@ -1970,26 +1970,48 @@
       setTimeout(() => { musicApply.textContent = '♪ Set'; }, 2000);
     });
 
-    // ── Copy HTML ────────────────────────────────────────────────────────────
-    const copyBtn = document.createElement('button');
-    copyBtn.id = 'edit-copy';
-    copyBtn.textContent = 'Copy HTML';
-    copyBtn.addEventListener('click', () => {
+    // ── Shared: build clean HTML ──────────────────────────────────────────────
+    function buildCleanHTML() {
       const clone = document.documentElement.cloneNode(true);
       clone.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
       clone.querySelectorAll('[data-edit-target]').forEach(el => el.removeAttribute('data-edit-target'));
       clone.querySelectorAll('.edit-img-btn,.edit-del-btn').forEach(b => b.remove());
+      clone.querySelectorAll('label.edit-add-img-btn-outer,button.edit-add-btn').forEach(b => b.remove());
       ['edit-bar','edit-styles'].forEach(id => { const el = clone.getElementById(id); if (el) el.remove(); });
       clone.querySelector('body').classList.remove('edit-mode');
-      // Sync data-title on project rows
       clone.querySelectorAll('.project-row').forEach(row => {
         const t = row.querySelector('.p-title');
         if (t) row.setAttribute('data-title', t.textContent.trim());
       });
-      const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+      return '<!DOCTYPE html>\n' + clone.outerHTML;
+    }
+
+    // ── Save (download) ───────────────────────────────────────────────────────
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'edit-save';
+    saveBtn.textContent = 'Save';
+    saveBtn.style.cssText = 'border-color:#c8c2f5!important;color:#c8c2f5!important;font-weight:600;';
+    saveBtn.addEventListener('click', () => {
+      const html = buildCleanHTML();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      saveBtn.textContent = 'Saved ✓';
+      setTimeout(() => { saveBtn.textContent = 'Save'; }, 2000);
+    });
+
+    // ── Copy HTML (secondary) ─────────────────────────────────────────────────
+    const copyBtn = document.createElement('button');
+    copyBtn.id = 'edit-copy';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const html = buildCleanHTML();
       navigator.clipboard.writeText(html)
-        .then(() => { copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy HTML'; }, 2500); })
-        .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy HTML'; }, 2500); });
+        .then(() => { copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2500); })
+        .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); copyBtn.textContent = 'Copied!'; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2500); });
     });
 
     // ── Exit ─────────────────────────────────────────────────────────────────
@@ -2059,7 +2081,7 @@
     const mutedPicker  = makeColorPicker('Muted',  '--muted');
     const accentPicker = makeColorPicker('Accent', '--accent');
 
-    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), copyBtn, exitBtn]
+    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), saveBtn, copyBtn, exitBtn]
       .forEach(el => bar.appendChild(el));
     document.body.appendChild(bar);
 
