@@ -5106,10 +5106,9 @@
     let landed  = -1;
     let spinning = false;
 
-    // ~300 frames fast burst; final 0.75s = 2 ramp frames (125ms each) + 0.5s fade
+    // ~300 frames at blur speed; landing = 0.75s crossfade (no step-down frames)
     const SCHEDULE = [
-      [12, 120], [18, 80], [28, 50], [44, 40], [60, 8],
-      [125, 1], [125, 1]
+      [12, 120], [18, 80], [28, 50], [44, 40], [60, 8]
     ];
 
     function spin() {
@@ -5118,6 +5117,7 @@
       btn.disabled = true;
       btn.classList.add('spinning');
       img.style.transition = 'none';
+      img.style.opacity = '1';
 
       preload(30);
 
@@ -5139,12 +5139,13 @@
           setCounter(idx);
           setTimeout(step, queue[qi++]);
         } else {
-          // smooth 0.5s fade onto final image
-          img.style.transition = 'opacity 0.5s cubic-bezier(0.16,1,0.3,1)';
+          // 0.75s crossfade: fade out (0.35s) → swap src → fade in (0.4s)
+          img.style.transition = 'opacity 0.35s ease-in';
           img.style.opacity = '0';
-          const done = () => {
+          setTimeout(() => {
             img.src = finalSrc;
             setCounter(next);
+            img.style.transition = 'opacity 0.4s ease-out';
             requestAnimationFrame(() => requestAnimationFrame(() => {
               img.style.opacity = '1';
             }));
@@ -5152,12 +5153,7 @@
             spinning = false;
             btn.disabled = false;
             btn.classList.remove('spinning');
-            img.removeEventListener('transitionend', onFade);
-          };
-          const onFade = () => done();
-          img.addEventListener('transitionend', onFade, { once: true });
-          // fallback if transition doesn't fire
-          setTimeout(done, 560);
+          }, 360);
         }
       }
       step();
