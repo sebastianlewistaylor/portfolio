@@ -157,7 +157,17 @@
             // Load a playlist for skip support: explicit list, or YouTube radio mix (RD+videoId)
             var list = parsed.listId || ('RD' + parsed.videoId);
             e.target.cuePlaylist({ list: list, listType: 'playlist' });
-            if (userWantsPlaying) { e.target.playVideo(); }
+            if (userWantsPlaying) {
+              e.target.playVideo();
+              // Mobile browsers block playVideo() outside a user gesture — detect and guide
+              setTimeout(function () {
+                if (userWantsPlaying && !isPlaying) {
+                  showToast('Tap ♪ to play');
+                  btn.classList.add('music-btn-pulse');
+                  setTimeout(function () { btn.classList.remove('music-btn-pulse'); }, 2000);
+                }
+              }, 900);
+            }
           },
           onStateChange: function (e) {
             var YT = window.YT;
