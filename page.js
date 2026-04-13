@@ -719,9 +719,9 @@
         const url = document.getElementById('eip-url').value.trim();
         if (url) img.src = url;
       });
-      document.getElementById('eip-url').addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('eip-apply').click();
-      });
+      const eipUrl = document.getElementById('eip-url');
+      eipUrl.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('eip-apply').click(); });
+      eipUrl.addEventListener('focus', () => eipUrl.select());
 
       const zoomSlider = document.getElementById('eip-zoom');
       const zoomVal    = document.getElementById('eip-zoom-val');
@@ -828,11 +828,17 @@
         panel.className = 'edit-add-img-panel';
         panel.style.cssText = 'background:#0c0c0c;border:1px solid rgba(200,194,245,0.25);padding:12px 14px;display:flex;flex-direction:column;gap:9px;font-family:Helvetica Neue,sans-serif;margin-bottom:6px;';
         panel.innerHTML = `
-          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image — URL only</div>
+          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Upload file</span>
+            <input type="file" accept="image/*" class="eip-file" style="font-size:10px;color:#888;flex:1;cursor:pointer;">
+          </label>
           <div style="display:flex;align-items:center;gap:6px;">
-            <input type="text" placeholder="https://cdn.myportfolio.com/…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
+            <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Or URL</span>
+            <input type="text" placeholder="https://…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
             <button class="eip-add-ok" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.4);background:transparent;color:#c8c2f5;padding:4px 10px;cursor:pointer;font-family:inherit;">Add</button>
           </div>
+          <div class="eip-upload-status" style="font-size:9px;color:#888;display:none;"></div>
         `;
 
         function wireImg(img) {
@@ -842,6 +848,43 @@
           container.appendChild(img);
           panel.remove();
         }
+
+        // File upload → push to GitHub assets/ → use raw URL
+        panel.querySelector('.eip-file').addEventListener('change', async function () {
+          const file = this.files[0];
+          if (!file) return;
+          const status = panel.querySelector('.eip-upload-status');
+          const token = localStorage.getItem('gh-edit-token') || '';
+          if (!token) {
+            status.style.display = '';
+            status.style.color = '#e05555';
+            status.textContent = 'No GitHub token — paste URL manually instead.';
+            return;
+          }
+          status.style.display = ''; status.style.color = '#888'; status.textContent = 'Uploading…';
+          try {
+            const buf = await file.arrayBuffer();
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const filename = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+            const res = await fetch(`https://api.github.com/repos/sebastianlewistaylor/portfolio/contents/${filename}`, {
+              method: 'PUT',
+              headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: 'Upload ' + file.name, content: b64 })
+            });
+            if (!res.ok) {
+              const e = await res.json().catch(() => ({}));
+              // 422 = file already exists, get its URL anyway
+              if (res.status !== 422) throw new Error(e.message || res.status);
+            }
+            const rawUrl = `https://raw.githubusercontent.com/sebastianlewistaylor/portfolio/main/${filename}`;
+            const img = document.createElement('img');
+            img.src = rawUrl;
+            wireImg(img);
+          } catch (err) {
+            status.style.color = '#e05555';
+            status.textContent = 'Upload failed: ' + err.message;
+          }
+        });
 
         const urlInput = panel.querySelector('.eip-add-url');
         panel.querySelector('.eip-add-ok').addEventListener('click', () => {
