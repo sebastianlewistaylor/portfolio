@@ -154,7 +154,9 @@
         events: {
           onReady: function (e) {
             ytReady = true;
-            if (parsed.listId) e.target.cuePlaylist({ list: parsed.listId, listType: 'playlist' });
+            // Load a playlist for skip support: explicit list, or YouTube radio mix (RD+videoId)
+            var list = parsed.listId || ('RD' + parsed.videoId);
+            e.target.cuePlaylist({ list: list, listType: 'playlist' });
             if (userWantsPlaying) { e.target.playVideo(); }
           },
           onStateChange: function (e) {

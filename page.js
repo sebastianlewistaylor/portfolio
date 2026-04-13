@@ -801,35 +801,20 @@
         panel.className = 'edit-add-img-panel';
         panel.style.cssText = 'background:#0c0c0c;border:1px solid rgba(200,194,245,0.25);padding:12px 14px;display:flex;flex-direction:column;gap:9px;font-family:Helvetica Neue,sans-serif;margin-bottom:6px;';
         panel.innerHTML = `
-          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image</div>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;">
-            Upload file
-            <input type="file" accept="image/*" style="font-size:10px;color:#f0ede8;flex:1;cursor:pointer;">
-          </label>
+          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image — URL only</div>
           <div style="display:flex;align-items:center;gap:6px;">
-            <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Or URL</span>
-            <input type="text" placeholder="https://…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
+            <input type="text" placeholder="https://cdn.myportfolio.com/…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
             <button class="eip-add-ok" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.4);background:transparent;color:#c8c2f5;padding:4px 10px;cursor:pointer;font-family:inherit;">Add</button>
           </div>
         `;
 
         function wireImg(img) {
           img.alt = ''; img.loading = 'lazy';
-          img.dataset.editTarget = 'image';
-          img.title = 'Click: edit  |  Right-click: remove';
           img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
           img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
           container.appendChild(img);
           panel.remove();
         }
-
-        panel.querySelector('input[type="file"]').addEventListener('change', function () {
-          const file = this.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = e => { const img = document.createElement('img'); img.src = e.target.result; wireImg(img); };
-          reader.readAsDataURL(file);
-        });
 
         const urlInput = panel.querySelector('.eip-add-url');
         panel.querySelector('.eip-add-ok').addEventListener('click', () => {
@@ -988,6 +973,12 @@
         // Clone images, strip edit UI
         const c = liveContainer.cloneNode(true);
         c.querySelectorAll('.edit-layout-bar, .edit-add-img-btn-outer, button.edit-img-btn, .edit-add-img-panel').forEach(el => el.remove());
+        // Strip edit artifacts from images; drop base64/Drive srcs
+        c.querySelectorAll('img').forEach(img => {
+          img.removeAttribute('title');
+          img.removeAttribute('data-edit-target');
+          if (img.src.startsWith('data:') || img.src.includes('drive.google.com')) img.remove();
+        });
         // Unwrap .tall-img-outer back to plain img
         c.querySelectorAll('.tall-img-outer').forEach(outer => {
           const img = outer.querySelector('img');
