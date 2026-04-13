@@ -676,6 +676,13 @@
 
       imgPanel.innerHTML = `
         <div class="eip-row">
+          <span class="eip-label">Upload</span>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;">
+            <input id="eip-file" type="file" accept="image/*,video/*" style="font-size:10px;color:#888;flex:1;cursor:pointer;">
+          </label>
+          <span id="eip-upload-status" style="font-size:9px;color:#888;display:none;margin-left:4px;"></span>
+        </div>
+        <div class="eip-row">
           <span class="eip-label">URL</span>
           <input id="eip-url" type="text" value="${img.src}" spellcheck="false">
           <button id="eip-apply">Apply</button>
@@ -732,6 +739,32 @@
       const left = Math.max(10, Math.min(rect.left, window.innerWidth - 340));
       Object.assign(imgPanel.style, { top: top + 'px', left: left + 'px' });
       document.body.appendChild(imgPanel);
+
+      // File picker upload
+      document.getElementById('eip-file').addEventListener('change', async function () {
+        const file = this.files[0];
+        if (!file) return;
+        const status = document.getElementById('eip-upload-status');
+        const eipUrl = document.getElementById('eip-url');
+        if (!localStorage.getItem('gh-edit-token')) {
+          status.style.display = ''; status.style.color = '#e05555';
+          status.textContent = 'No token — paste a GitHub token in the edit bar first.';
+          return;
+        }
+        status.style.display = ''; status.style.color = '#888'; status.textContent = 'Uploading…';
+        if (eipUrl) eipUrl.value = 'Uploading…';
+        try {
+          const rawUrl = await uploadImageFile(file);
+          img.src = rawUrl;
+          if (eipUrl) eipUrl.value = rawUrl;
+          status.textContent = 'Done ✓'; status.style.color = '#17a849';
+          setTimeout(() => { status.style.display = 'none'; }, 2500);
+        } catch (err) {
+          if (eipUrl) eipUrl.value = '';
+          status.style.color = '#e05555';
+          status.textContent = err.message === 'no-token' ? 'No token in edit bar.' : 'Upload failed: ' + err.message;
+        }
+      });
 
       // Drag a file onto the panel to replace the image
       imgPanel.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); imgPanel.style.outline = `1px dashed ${accent}`; } });
