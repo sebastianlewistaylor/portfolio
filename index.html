@@ -524,10 +524,38 @@
       will-change: transform;
     }
     .slot-trigger.spinning .slot-icon {
-      animation: slot-spin 0.35s linear infinite;
+      animation: slot-spin 0.4s linear infinite;
     }
     @keyframes slot-spin {
       to { transform: rotate(360deg); }
+    }
+
+    /* slot-label reel: clips to one character height, scrolls through chars */
+    .slot-label {
+      display: inline-block;
+      overflow: hidden;
+      height: 1.1em;
+      vertical-align: middle;
+      position: relative;
+    }
+    .slot-label-inner {
+      display: flex;
+      flex-direction: column;
+      transition: none;
+    }
+    .slot-label-char {
+      display: block;
+      line-height: 1.1em;
+      text-align: center;
+    }
+    .slot-trigger.spinning .slot-label-inner {
+      animation: label-reel 0.18s steps(1) infinite;
+    }
+    @keyframes label-reel {
+      0%   { transform: translateY(0); }
+      25%  { transform: translateY(-1.1em); }
+      50%  { transform: translateY(-2.2em); }
+      75%  { transform: translateY(-3.3em); }
     }
 
     @media (max-width: 900px) {
@@ -1072,7 +1100,14 @@
     <div class="slot-trigger-wrap" id="slotTriggerWrap">
       <button class="slot-trigger" id="slotTrigger" aria-label="Spin">
         <span class="slot-icon">⊙</span>
-        <span class="slot-label">SPIN</span>
+        <span class="slot-label">
+          <span class="slot-label-inner">
+            <span class="slot-label-char">SPIN</span>
+            <span class="slot-label-char">7777</span>
+            <span class="slot-label-char">BAR!</span>
+            <span class="slot-label-char">★★★★</span>
+          </span>
+        </span>
       </button>
     </div>
   </section>
@@ -5106,9 +5141,9 @@
     let landed  = -1;
     let spinning = false;
 
-    // ~300 frames at blur speed; landing = 0.75s crossfade (no step-down frames)
+    // ~150 frames at visible speed (~30fps start); counter + image both update each frame
     const SCHEDULE = [
-      [12, 120], [18, 80], [28, 50], [44, 40], [60, 8]
+      [30, 55], [42, 40], [58, 28], [80, 18], [115, 9]
     ];
 
     function spin() {
@@ -5137,6 +5172,7 @@
         if (qi < queue.length) {
           const idx = nextIdx();
           img.src = BASE + IMAGES[idx];
+          setCounter(idx);
           setTimeout(step, queue[qi++]);
         } else {
           // 0.75s crossfade: fade out (0.35s) → swap src → fade in (0.4s)
