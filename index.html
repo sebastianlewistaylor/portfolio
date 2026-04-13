@@ -358,12 +358,13 @@
       opacity: 0.7;
     }
 
-    /* bezel top strip: LED + brand label */
+    /* bezel top strip: LED + counter + brand label */
     .slot-screen-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 6px 10px;
+      gap: 8px;
     }
     .slot-led {
       width: 6px; height: 6px;
@@ -377,6 +378,17 @@
       0%, 100% { opacity: 1; box-shadow: 0 0 5px #00e05a, 0 0 10px rgba(0,224,90,0.6); }
       50%       { opacity: 0.35; box-shadow: 0 0 2px #00e05a; }
     }
+    .slot-counter {
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      letter-spacing: 0.18em;
+      color: #00e05a;
+      text-shadow: 0 0 8px rgba(0,224,90,0.7);
+      flex: 1;
+      text-align: center;
+      user-select: none;
+      min-width: 0;
+    }
     .slot-brand {
       font-family: 'VT323', monospace;
       font-size: 12px;
@@ -384,14 +396,15 @@
       color: #444;
       text-transform: uppercase;
       user-select: none;
+      flex-shrink: 0;
     }
 
     .slot-window {
       width: 100%;
+      height: clamp(320px, 60vh, 560px);
       overflow: hidden;
       position: relative;
       border-radius: 6px;
-      max-height: 70vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -430,10 +443,9 @@
 
     .slot-img {
       width: 100%;
-      height: auto;
+      height: 100%;
       display: block;
-      object-fit: contain;
-      max-height: 70vh;
+      object-fit: cover;
       position: relative;
       z-index: 1;
     }
@@ -519,9 +531,20 @@
     }
 
     @media (max-width: 900px) {
-      #info { flex-direction: column; padding-bottom: 120px; }
+      #info { flex-direction: column; align-items: stretch; padding-bottom: 60px; }
       .info-right { order: -1; max-width: 100%; width: 100%; }
-      .slot-trigger-wrap { top: auto; bottom: 32px; transform: translateX(-50%); }
+      .slot-trigger-wrap {
+        order: 0;
+        position: relative;
+        left: auto; top: auto;
+        transform: none;
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        margin-bottom: 16px;
+        perspective: 600px;
+      }
+      .info-wrap { order: 1; }
     }
 
     .cursive-top {
@@ -1037,7 +1060,8 @@
       <div class="slot-bezel">
         <div class="slot-screen-top">
           <span class="slot-led"></span>
-          <span class="slot-brand">FAUX™ — 855</span>
+          <span class="slot-counter" id="slotCounter">···  /  855</span>
+          <span class="slot-brand">FAUX™</span>
         </div>
         <div class="slot-window" id="slotWindow">
           <img class="slot-img" id="slotImg" src="" alt="" loading="eager">
@@ -3644,27 +3668,48 @@
     '18467380864018043.jpg'
   ];
 
-    const img  = document.getElementById('slotImg');
-    const btn  = document.getElementById('slotTrigger');
-    const wrap = document.getElementById('slotTriggerWrap');
-    const icon = btn ? btn.querySelector('.slot-icon') : null;
+    const img     = document.getElementById('slotImg');
+    const btn     = document.getElementById('slotTrigger');
+    const counter = document.getElementById('slotCounter');
+    const icon    = btn ? btn.querySelector('.slot-icon') : null;
     if (!img || !btn || !IMAGES.length) return;
 
-    let landed  = -1;
-    let spinning = false;
+    // Fisher-Yates shuffle → guaranteed no repeats across the full set
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+    let pool = shuffle(IMAGES.map((_, i) => i));
+    let poolIdx = 0;
+    function nextIdx() {
+      if (poolIdx >= pool.length) { pool = shuffle(IMAGES.map((_, i) => i)); poolIdx = 0; }
+      return pool[poolIdx++];
+    }
+
+    function setCounter(idx) {
+      if (counter) counter.textContent = String(idx + 1).padStart(3, '0') + '  /  855';
+    }
 
     function preload(count) {
       for (let i = 0; i < count; i++) {
         const el = new Image();
-        el.src = BASE + IMAGES[Math.floor(Math.random() * IMAGES.length)];
+        el.src = BASE + IMAGES[nextIdx()];
       }
     }
 
-    // ~300 frames, 8-10s total: full-blur burst → satisfying deceleration
+    let landed  = -1;
+    let spinning = false;
+
+    // ~300 frames burst → decel; last 4 slots are the smooth 0.5s glide-to-stop
     const SCHEDULE = [
       [12, 80], [18, 60], [28, 40], [44, 35],
       [68, 28], [105, 22], [160, 16], [240, 10],
-      [360, 6], [520, 3]
+      // smooth landing ramp over ~0.5s
+      [90, 1], [130, 1], [175, 1], [230, 1]
     ];
 
     function spin() {
@@ -3672,13 +3717,12 @@
       spinning = true;
       btn.disabled = true;
       btn.classList.add('spinning');
+      img.style.transition = 'none';
 
       preload(30);
 
       let next;
-      do { next = Math.floor(Math.random() * IMAGES.length); }
-      while (next === landed && IMAGES.length > 1);
-
+      do { next = nextIdx(); } while (next === landed && IMAGES.length > 1);
       const finalSrc = BASE + IMAGES[next];
       const pre = new Image(); pre.src = finalSrc;
 
@@ -3690,14 +3734,30 @@
       let qi = 0;
       function step() {
         if (qi < queue.length) {
-          img.src = BASE + IMAGES[Math.floor(Math.random() * IMAGES.length)];
+          const idx = nextIdx();
+          img.src = BASE + IMAGES[idx];
+          setCounter(idx);
           setTimeout(step, queue[qi++]);
         } else {
-          img.src = finalSrc;
-          landed = next;
-          spinning = false;
-          btn.disabled = false;
-          btn.classList.remove('spinning');
+          // smooth 0.5s fade onto final image
+          img.style.transition = 'opacity 0.5s cubic-bezier(0.16,1,0.3,1)';
+          img.style.opacity = '0';
+          const done = () => {
+            img.src = finalSrc;
+            setCounter(next);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              img.style.opacity = '1';
+            }));
+            landed = next;
+            spinning = false;
+            btn.disabled = false;
+            btn.classList.remove('spinning');
+            img.removeEventListener('transitionend', onFade);
+          };
+          const onFade = () => done();
+          img.addEventListener('transitionend', onFade, { once: true });
+          // fallback if transition doesn't fire
+          setTimeout(done, 560);
         }
       }
       step();
