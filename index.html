@@ -2453,43 +2453,56 @@
       chars = Array.from(el.querySelectorAll('.c-char'));
       if (!chars.length) return;
 
+      let wasAnyInside = false;
+      let currentFont  = null;
+      let resetTimer   = null;
+
+      function applyFont(f) {
+        chars.forEach(span => {
+          span.style.fontFamily    = f.f;
+          span.style.fontWeight    = f.w;
+          span.style.letterSpacing = 'normal';
+          span.style.fontKerning   = 'normal';
+        });
+      }
+
+      function resetFont() {
+        chars.forEach(span => {
+          span.style.fontFamily    = '';
+          span.style.fontWeight    = '';
+          span.style.letterSpacing = '';
+          span.style.fontKerning   = '';
+          span.style.opacity       = '';
+        });
+        currentFont = null;
+      }
+
       (function tick() {
         if (window._blobPos) {
           const { x, y } = window._blobPos;
-          chars.forEach(span => {
-            const r = span.getBoundingClientRect();
+          const anyInside = chars.some(span => {
+            const r  = span.getBoundingClientRect();
             const cx = r.left + r.width  / 2;
             const cy = r.top  + r.height / 2;
-            const inside = Math.hypot(x - cx, y - cy) < BLOB_R;
-
-            if (span._inside && !inside) {
-              // Exited blob — pick a font different from whatever is currently showing
-              const current = span._currentFont || '';
-              let next;
-              do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
-              while (next === current || next.f === (current && current.f));
-              span.style.fontFamily    = next.f;
-              span.style.fontWeight    = next.w;
-              span.style.letterSpacing = 'normal';
-              span.style.fontKerning   = 'normal';
-              span._currentFont = next;
-
-              // Reset after 2s: brief opacity dip then back to inherited bickham-script
-              clearTimeout(span._resetTimer);
-              span._resetTimer = setTimeout(() => {
-                span.style.opacity = '0.35';
-                setTimeout(() => {
-                  span.style.fontFamily    = '';
-                  span.style.fontWeight    = '';
-                  span.style.letterSpacing = '';
-                  span.style.fontKerning   = '';
-                  span.style.opacity       = '';
-                  span._currentFont        = '';
-                }, 220);
-              }, 2000);
-            }
-            span._inside = inside;
+            return Math.hypot(x - cx, y - cy) < BLOB_R;
           });
+
+          if (wasAnyInside && !anyInside) {
+            // Blob just left the text — pick one font for the whole phrase
+            let next;
+            do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
+            while (currentFont && next.f === currentFont.f);
+            applyFont(next);
+            currentFont = next;
+
+            // Reset after 2s: opacity dip then back to bickham-script
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => {
+              chars.forEach(span => { span.style.opacity = '0.35'; });
+              setTimeout(resetFont, 220);
+            }, 2000);
+          }
+          wasAnyInside = anyInside;
         }
         requestAnimationFrame(tick);
       })();
