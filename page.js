@@ -548,12 +548,22 @@
       });
     });
 
-    // Block link navigation only when clicking inside an editable field
+    // Block link navigation when clicking inside an editable field, but allow nav links
     document.addEventListener('click', e => {
       if (!e.target.closest('[contenteditable]')) return;
       const a = e.target.closest('a');
-      if (a) { e.preventDefault(); e.stopPropagation(); }
+      if (!a) return;
+      if (a.classList.contains('p-nav-back') || a.classList.contains('p-nav-name')) return;
+      e.preventDefault(); e.stopPropagation();
     }, true);
+
+    // Right-click to delete images, meta rows, and text sections
+    document.addEventListener('contextmenu', e => {
+      const img = e.target.closest('.p-images img');
+      if (img) { e.preventDefault(); if (confirm('Remove image?')) img.remove(); return; }
+      const metaRow = e.target.closest('.p-meta > div');
+      if (metaRow) { e.preventDefault(); if (confirm('Remove this row?')) metaRow.remove(); return; }
+    });
 
     // Option+click on any contenteditable text node → duplicate it inline
     document.addEventListener('mousedown', e => {

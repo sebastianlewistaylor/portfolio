@@ -1785,19 +1785,28 @@
 
     // Archive-cell image editing
     document.querySelectorAll('.archive-cell').forEach(cell => {
+      // Make text editable
+      cell.querySelectorAll('.archive-title, .archive-year').forEach(el => {
+        el.contentEditable = 'true';
+        el.dataset.editTarget = 'text';
+      });
+      // Block nav when clicking inside the text zone; right-click to delete
+      cell.querySelector('.archive-cell-meta').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); }, true);
+      cell.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this entry?')) cell.remove(); });
       addImgBtn(cell,
         () => cell.querySelector('.archive-cell-inner'),
         () => (cell.querySelector('.archive-cell-inner').style.backgroundImage || '').replace(/^url\(['"]?|['"]?\)$/g, '')
       );
     });
 
-    // Project-row image editing
+    // Project-row image editing + right-click delete
     document.querySelectorAll('.project-row').forEach(row => {
       row.style.position = 'relative';
       const btn = document.createElement('button');
       btn.className = 'edit-img-btn'; btn.textContent = '✎'; btn.style.top = '50%'; btn.style.transform = 'translateY(-50%)'; btn.title = 'Edit preview image';
       btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(row, row.dataset.img || ''); });
       row.appendChild(btn);
+      row.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this entry?')) row.remove(); });
     });
 
     // ── Drag to reorder ──────────────────────────────────────────────────────
