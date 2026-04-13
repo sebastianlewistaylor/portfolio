@@ -2467,13 +2467,27 @@
         origEl.innerHTML = c.innerHTML;
       });
 
-      // Accent color
-      const accent = document.body.dataset.accent || document.documentElement.style.getPropertyValue('--accent').trim();
-      if (accent) {
-        origDoc.body.dataset.accent = accent;
-        const styleEl = Array.from(origDoc.head.querySelectorAll('style')).find(s => s.textContent.includes('--accent'));
-        if (styleEl) styleEl.textContent = styleEl.textContent.replace(/--accent\s*:[^;]+;/, `--accent: ${accent};`);
+      // Archive cell background-images — explicit patch (belt-and-suspenders over innerHTML swap)
+      document.querySelectorAll('.archive-cell-inner').forEach((el, i) => {
+        const bg = el.getAttribute('style') || '';
+        const origCell = origDoc.querySelectorAll('.archive-cell-inner')[i];
+        if (origCell && bg) origCell.setAttribute('style', bg);
+      });
+
+      // CSS variables — copy entire :root block from live <style> to origDoc
+      // Handles --fg, --bg, --muted, --accent, --active-color, --border etc. all at once
+      const liveStyle = Array.from(document.head.querySelectorAll('style')).find(s => s.textContent.includes(':root'));
+      const origStyle = Array.from(origDoc.head.querySelectorAll('style')).find(s => s.textContent.includes(':root'));
+      if (liveStyle && origStyle) {
+        const liveRoot = liveStyle.textContent.match(/:root\s*\{([^}]+)\}/);
+        if (liveRoot) {
+          origStyle.textContent = origStyle.textContent.replace(/:root\s*\{[^}]+\}/, ':root {' + liveRoot[1] + '}');
+        }
       }
+
+      // body data-accent for JS that reads it
+      const accent = document.body.dataset.accent || document.documentElement.style.getPropertyValue('--accent').trim();
+      if (accent) origDoc.body.dataset.accent = accent;
 
       // Music URI — write into HTML so all visitors get the same playlist
       const musicUri = document.body.dataset.musicUri || localStorage.getItem('music-uri') || '';

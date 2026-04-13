@@ -209,6 +209,24 @@
   var _stored = storedUri();
   if (_stored) bootPlayer(_stored);
 
+  // ── Double-tap to skip (mobile) ────────────────────────────────────────────
+  var _lastTap = 0;
+  btn.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    if (now - _lastTap < 300) {
+      e.preventDefault(); // suppress the click that follows
+      try {
+        if (activeType === 'youtube' && ytPlayer && ytReady) ytPlayer.nextVideo();
+        else if (activeType === 'spotify' && spController && spReady) spController.nextTrack();
+      } catch (err) {}
+      ring.style.background = makeRingGradient();
+      showToast('Next ›');
+      _lastTap = 0;
+    } else {
+      _lastTap = now;
+    }
+  }, { passive: false });
+
   // ── Toggle ─────────────────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
     btn.style.opacity = '0.4';
