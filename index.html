@@ -1713,7 +1713,17 @@
       cursorEl.style.left = mouseX + 'px';
       cursorEl.style.top  = mouseY + 'px';
     };
+    window._indexTouchMove = function (e) {
+      var t = e.touches[0];
+      if (!t) return;
+      mouseX = t.clientX;
+      mouseY = t.clientY;
+      cursorEl.style.left = mouseX + 'px';
+      cursorEl.style.top  = mouseY + 'px';
+    };
     document.addEventListener('mousemove', window._indexMouseMove);
+    document.addEventListener('touchstart', window._indexTouchMove, { passive: true });
+    document.addEventListener('touchmove',  window._indexTouchMove, { passive: true });
 
     var smoothAngle = 0;
     function physicsLoop() {
@@ -1774,6 +1784,11 @@
       if (window._indexMouseMove) {
         document.removeEventListener('mousemove', window._indexMouseMove);
         window._indexMouseMove = null;
+      }
+      if (window._indexTouchMove) {
+        document.removeEventListener('touchstart', window._indexTouchMove);
+        document.removeEventListener('touchmove',  window._indexTouchMove);
+        window._indexTouchMove = null;
       }
     };
     (function idxTick() {
@@ -2334,7 +2349,8 @@
     musicApply.addEventListener('click', () => {
       const raw = musicInput.value.trim();
       if (!raw) return;
-      // Pass through as-is — music.js detectType() handles Spotify URIs/URLs and YouTube URLs/IDs
+      // Store in body attribute so applyEdits pushes it to GitHub for all viewers
+      document.body.dataset.musicUri = raw;
       if (window._musicPlayer) window._musicPlayer.updateUri(raw);
       else localStorage.setItem('music-uri', raw);
       musicApply.textContent = '✓';
@@ -2458,6 +2474,10 @@
         const styleEl = Array.from(origDoc.head.querySelectorAll('style')).find(s => s.textContent.includes('--accent'));
         if (styleEl) styleEl.textContent = styleEl.textContent.replace(/--accent\s*:[^;]+;/, `--accent: ${accent};`);
       }
+
+      // Music URI — write into HTML so all visitors get the same playlist
+      const musicUri = document.body.dataset.musicUri || localStorage.getItem('music-uri') || '';
+      if (musicUri) origDoc.body.dataset.musicUri = musicUri;
     }
 
     // ── GitHub API push ───────────────────────────────────────────────────────

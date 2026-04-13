@@ -3,7 +3,7 @@
   if (window._musicPlayer) return;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function storedUri() { return localStorage.getItem('music-uri') || ''; }
+  function storedUri() { return document.body.dataset.musicUri || localStorage.getItem('music-uri') || ''; }
 
   function detectType(uri) {
     if (!uri) return null;
