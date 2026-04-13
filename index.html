@@ -2315,7 +2315,18 @@
     tokenInput.style.width = '160px';
     tokenInput.value = localStorage.getItem('gh-edit-token') || '';
 
-    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), tokenLbl, tokenInput, sep(), saveBtn, copyBtn, exitBtn]
+    const cursiveToggle = document.createElement('button');
+    cursiveToggle.title = 'Toggle typeface effect mode';
+    const _initMode = window._cursiveFontMode || 'consistent';
+    cursiveToggle.textContent = 'Type: ' + (_initMode === 'random' ? 'Rnd' : 'Con');
+    cursiveToggle.addEventListener('click', () => {
+      const next = (window._cursiveFontMode || 'consistent') === 'consistent' ? 'random' : 'consistent';
+      window._cursiveFontMode = next;
+      localStorage.setItem('cursive-font-mode', next);
+      cursiveToggle.textContent = 'Type: ' + (next === 'random' ? 'Rnd' : 'Con');
+    });
+
+    [lbl, sep(), musicInput, musicApply, sep(), addWorkBtn, addArchiveBtn, addPageBtn, sep(), sizeUp, sizeDn, sep(), imgInput, imgApply, sep(), bgPicker, fgPicker, mutedPicker, accentPicker, sep(), cursiveToggle, sep(), tokenLbl, tokenInput, sep(), saveBtn, copyBtn, exitBtn]
       .forEach(el => bar.appendChild(el));
     document.body.appendChild(bar);
 
@@ -2445,6 +2456,9 @@
     let chars = [];
     let loopStarted = false;
 
+    // Typeface mode: 'consistent' = one font per swipe, 'random' = each char different
+    window._cursiveFontMode = localStorage.getItem('cursive-font-mode') || 'consistent';
+
     function startLoop() {
       if (loopStarted) return;
       loopStarted = true;
@@ -2453,55 +2467,62 @@
       chars = Array.from(el.querySelectorAll('.c-char'));
       if (!chars.length) return;
 
+      let swipeFont    = null; // one font for the whole swipe in consistent mode
       let wasAnyInside = false;
-      let currentFont  = null;
-      let resetTimer   = null;
 
-      function applyFont(f) {
-        chars.forEach(span => {
-          span.style.fontFamily    = f.f;
-          span.style.fontWeight    = f.w;
-          span.style.letterSpacing = 'normal';
-          span.style.fontKerning   = 'normal';
-        });
-      }
-
-      function resetFont() {
-        chars.forEach(span => {
-          span.style.fontFamily    = '';
-          span.style.fontWeight    = '';
-          span.style.letterSpacing = '';
-          span.style.fontKerning   = '';
-          span.style.opacity       = '';
-        });
-        currentFont = null;
+      function pickFont(exclude) {
+        let next;
+        do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
+        while (exclude && next.f === exclude.f);
+        return next;
       }
 
       (function tick() {
         if (window._blobPos) {
           const { x, y } = window._blobPos;
-          const anyInside = chars.some(span => {
+          const mode = window._cursiveFontMode || 'consistent';
+          let anyInside = false;
+
+          chars.forEach(span => {
             const r  = span.getBoundingClientRect();
             const cx = r.left + r.width  / 2;
             const cy = r.top  + r.height / 2;
-            return Math.hypot(x - cx, y - cy) < BLOB_R;
+            const inside = Math.hypot(x - cx, y - cy) < BLOB_R;
+            if (inside) anyInside = true;
+
+            if (span._inside && !inside) {
+              // Character just exited blob — assign font based on mode
+              let f;
+              if (mode === 'consistent') {
+                if (!swipeFont) swipeFont = pickFont(null);
+                f = swipeFont;
+              } else {
+                f = pickFont(span._currentFont);
+              }
+              span.style.fontFamily    = f.f;
+              span.style.fontWeight    = f.w;
+              span.style.letterSpacing = 'normal';
+              span.style.fontKerning   = 'normal';
+              span._currentFont = f;
+
+              clearTimeout(span._resetTimer);
+              span._resetTimer = setTimeout(() => {
+                span.style.opacity = '0.35';
+                setTimeout(() => {
+                  span.style.fontFamily    = '';
+                  span.style.fontWeight    = '';
+                  span.style.letterSpacing = '';
+                  span.style.fontKerning   = '';
+                  span.style.opacity       = '';
+                  span._currentFont        = null;
+                }, 220);
+              }, 2000);
+            }
+            span._inside = inside;
           });
 
-          if (wasAnyInside && !anyInside) {
-            // Blob just left the text — pick one font for the whole phrase
-            let next;
-            do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
-            while (currentFont && next.f === currentFont.f);
-            applyFont(next);
-            currentFont = next;
-
-            // Reset after 2s: opacity dip then back to bickham-script
-            clearTimeout(resetTimer);
-            resetTimer = setTimeout(() => {
-              chars.forEach(span => { span.style.opacity = '0.35'; });
-              setTimeout(resetFont, 220);
-            }, 2000);
-          }
+          // Blob left text — clear swipeFont so next pass picks fresh
+          if (wasAnyInside && !anyInside) swipeFont = null;
           wasAnyInside = anyInside;
         }
         requestAnimationFrame(tick);
