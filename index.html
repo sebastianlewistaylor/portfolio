@@ -1914,7 +1914,7 @@
       </div>`;
       document.body.appendChild(ov);
       document.getElementById('np-cancel').addEventListener('click', () => ov.remove());
-      document.getElementById('np-create').addEventListener('click', () => {
+      document.getElementById('np-create').addEventListener('click', async () => {
         const slug  = (document.getElementById('np-slug').value.trim() || 'new-project.html').replace(/[^a-z0-9._-]/gi,'');
         const title = document.getElementById('np-title').value.trim() || 'New Project';
         const sub   = document.getElementById('np-sub').value.trim()   || 'Discipline';
@@ -1924,11 +1924,10 @@
 
         const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${title} — Sebastian Taylor</title>\n  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">\n  <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">\n  <link rel="stylesheet" href="page.css">\n  <style>:root { --accent: ${color}; }</style>\n</head>\n<body data-accent="${color}">\n<div id="page-transition"></div>\n<div class="cursor" id="cursor">®</div>\n<div class="cursor-follower" id="cursorFollower"></div>\n<nav class="p-nav">\n  <a class="p-nav-back" href="index.html" id="back-link">Work</a>\n  <a class="p-nav-name" href="index.html">Sebastian Taylor</a>\n</nav>\n<div class="p-hero"><img src="${hero}" alt="${title}" loading="eager"></div>\n<section class="p-info">\n  <div>\n    <div class="p-title">${title}</div>\n    <div class="p-subtitle">${sub}</div>\n    <p class="p-body">Project description goes here.</p>\n  </div>\n  <div class="p-meta">\n    <div><div class="p-meta-label">Year</div><div class="p-meta-value">2025</div></div>\n    <div><div class="p-meta-label">Client</div><div class="p-meta-value">Client Name</div></div>\n    <div><div class="p-meta-label">Disciplines</div><div class="p-meta-value">Brand Identity, Art Direction</div></div>\n  </div>\n</section>\n<div class="p-images">\n  <img src="IMAGE_URL_HERE" alt="" loading="lazy">\n  <img src="IMAGE_URL_HERE" alt="" loading="lazy">\n</div>\n<a class="p-back-row" href="index.html" id="back-link2">\n  <div class="p-back-row-bg"></div>\n  <div><div class="p-back-label">Back to</div><div class="p-back-title">All Work</div></div>\n  <div class="p-back-arrow">↙</div>\n</a>\n<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"><\/script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>\n<script src="router.js"><\/script>\n<script src="page.js"><\/script>\n<script src="music.js"><\/script>\n</body></html>`;
 
-        const doCopy = () => navigator.clipboard.writeText(html)
-          .then(() => alert(`Copied! Paste into a new file named "${slug}" in your portfolio folder.`))
-          .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert(`Copied! Paste into "${slug}".`); });
-        doCopy();
+        const createBtn = document.getElementById('np-create');
+        createBtn.textContent = 'Creating…'; createBtn.disabled = true;
 
+        // 1 — add the entry to the live DOM
         if (sec === 'work') {
           const n = projectList.querySelectorAll('.project-row').length + 1;
           const row = document.createElement('a');
@@ -1940,17 +1939,11 @@
           row.style.position = 'relative';
           row.innerHTML = `<div class="project-row-bg"></div>
             <div class="p-num" contenteditable="true" data-edit-target="text">${String(n).padStart(2,'0')}</div>
-            <div class="p-info">
-              <div class="p-title-wrap"><span class="p-title" contenteditable="true" data-edit-target="text">${title}</span></div>
-              <div class="p-tags"><span class="p-tag" contenteditable="true" data-edit-target="text">Category</span></div>
-            </div>
+            <div class="p-title-wrap"><span class="p-title" contenteditable="true" data-edit-target="text">${title}</span></div>
+            <div class="p-tags"><span class="p-tag" contenteditable="true" data-edit-target="text">Category</span></div>
             <div class="p-year" contenteditable="true" data-edit-target="text">2025</div>
             <div class="p-arrow">↙</div>`;
           addDelBtn(row, () => row.remove());
-          const ib = document.createElement('button');
-          ib.className = 'edit-img-btn'; ib.textContent = '✎'; ib.style.top = '50%'; ib.style.transform = 'translateY(-50%)';
-          ib.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgEdit(row, row.dataset.img || ''); });
-          row.appendChild(ib);
           if (wireProjectRow) wireProjectRow(row);
           if (projectList) projectList.appendChild(row);
         } else {
@@ -1969,7 +1962,35 @@
           if (wireArchiveCell) wireArchiveCell(cell);
           if (archiveGrid) archiveGrid.appendChild(cell);
         }
-        ov.remove();
+
+        // 2 — push new page file + updated index.html to GitHub
+        const token = localStorage.getItem('gh-edit-token') || (document.getElementById('edit-gh-token') || {}).value || '';
+        if (!token) {
+          alert('Paste your GitHub token in the edit bar first, then try again.');
+          createBtn.textContent = 'Copy Page HTML + Add Entry'; createBtn.disabled = false;
+          return;
+        }
+        const REPO = 'sebastianlewistaylor/portfolio';
+        const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+        const encoded = btoa(unescape(encodeURIComponent(html)));
+
+        try {
+          // Create new page file (no sha = new file)
+          const createRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${slug}`, {
+            method: 'PUT', headers,
+            body: JSON.stringify({ message: `Add ${slug}`, content: encoded })
+          });
+          if (!createRes.ok) {
+            const e = await createRes.json().catch(() => ({}));
+            throw new Error(e.message || 'Create failed ' + createRes.status);
+          }
+          // Save index.html with the new entry
+          await ghPush('index.html');
+          ov.remove();
+        } catch (err) {
+          alert('Failed: ' + err.message);
+          createBtn.textContent = 'Copy Page HTML + Add Entry'; createBtn.disabled = false;
+        }
       });
     }
 
