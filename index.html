@@ -1707,6 +1707,10 @@
       '.ticker-item',
     ].forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
+        // Unwrap c-char spans before making editable so user edits plain text
+        if (el.classList.contains('cursive-top') && el.querySelector('.c-char')) {
+          el.textContent = el.textContent;
+        }
         el.contentEditable = 'true';
         el.dataset.editTarget = 'text';
       });
@@ -2063,6 +2067,10 @@
         el.style.willChange = '';
         el.style.visibility = '';
       });
+      // Strip c-char spans from cursive-top — effect re-wraps on load from textContent
+      clone.querySelectorAll('.cursive-top .c-char').forEach(span => {
+        span.replaceWith(document.createTextNode(span.textContent));
+      });
       // Archive cells: remove edit-mode inline layout styles, keep background-image wrappers
       clone.querySelectorAll('a.archive-cell').forEach(el => {
         el.style.display = '';
@@ -2097,7 +2105,15 @@
       ].forEach(sel => {
         const live = document.querySelectorAll(sel);
         const orig = origDoc.querySelectorAll(sel);
-        live.forEach((el, i) => { if (orig[i]) orig[i].innerHTML = el.innerHTML; });
+        live.forEach((el, i) => {
+          if (!orig[i]) return;
+          if (el.classList.contains('cursive-top')) {
+            // Save plain text only — c-char spans are runtime scaffolding
+            orig[i].textContent = el.textContent;
+          } else {
+            orig[i].innerHTML = el.innerHTML;
+          }
+        });
       });
 
       // Contact row hrefs (double-click edited)
