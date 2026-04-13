@@ -1136,7 +1136,7 @@
           if (!orig) return;
           const c = live.cloneNode(true);
           c.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
-          c.querySelectorAll('.edit-meta-add-btn').forEach(el => el.remove());
+          c.querySelectorAll('button').forEach(el => el.remove()); // strip all edit UI buttons (+ Row etc.)
           orig.innerHTML = c.innerHTML;
         });
       });
@@ -1157,7 +1157,13 @@
       const liveHeroImg = document.querySelector('.p-hero img');
       const origHeroImg = origDoc.querySelector('.p-hero img');
       if (liveHeroImg && origHeroImg) {
-        origHeroImg.src = liveHeroImg.src;
+        // Use getAttribute to get the raw attribute value (not browser-resolved absolute URL).
+        // Skip saving if it's still the placeholder or if the resolved URL contains the placeholder.
+        const heroSrcAttr = liveHeroImg.getAttribute('src') || '';
+        const heroSrcFull = liveHeroImg.src || '';
+        if (!heroSrcAttr.includes('IMAGE_URL_HERE') && !heroSrcFull.includes('IMAGE_URL_HERE')) {
+          origHeroImg.src = heroSrcFull;
+        }
         ['focal','zoom'].forEach(k => { if (liveHeroImg.dataset[k]) origHeroImg.dataset[k] = liveHeroImg.dataset[k]; });
         ['objectFit','objectPosition'].forEach(p => { if (liveHeroImg.style[p]) origHeroImg.style[p] = liveHeroImg.style[p]; else origHeroImg.style[p] = ''; });
         const liveHero = document.querySelector('.p-hero'), origHero = origDoc.querySelector('.p-hero');
