@@ -73,17 +73,13 @@
       z-index: 9998;
       transform-origin: center center;
       transition: background 0.6s ease;
+      /* size + squash/stretch driven by JS — no CSS transitions on those */
     }
 
     body.cursor-hover .cursor {
       font-size: 22px;
       width: 80px;
       height: 80px;
-    }
-
-    body.cursor-hover .cursor-follower {
-      width: 110px;
-      height: 110px;
     }
 
     /* ── Splash ── */
@@ -1702,76 +1698,106 @@
 
     var bx = followerEl.style.left ? parseFloat(followerEl.style.left) + 40 : mouseX;
     var by = followerEl.style.top  ? parseFloat(followerEl.style.top)  + 40 : mouseY;
-    var vx = 0, vy = 0, ax = 0, ay = 0;
+    var vx = 0, vy = 0;
 
-    var STIFFNESS = 0.055, DAMPING = 0.78, MASS = 1.0;
+    // ── Space physics ──────────────────────────────────────────────────────────
+    // Weak spring + very low damping = floaty, heavy, orbiting feel.
+    // Mass scales with blob area so a larger blob resists movement more.
+    var STIFFNESS = 0.026;  // weak pull toward cursor
+    var DAMPING   = 0.89;   // low drag — objects in space keep moving
+    var BASE_R    = 40;     // half-radius at rest  (80px diameter)
+    var HOVER_R   = 55;     // half-radius on hover (110px diameter)
+    var currentR  = BASE_R;
+    var targetR   = BASE_R;
+
+    // 8 oscillators for organic shape noise (slower, wobblier than before)
     var cs = Array.from({length: 8}, function () { return { p: 50, v: 0 }; });
-    var cK = [0.14, 0.20, 0.18, 0.12, 0.16, 0.22, 0.15, 0.19];
-    var cD = [0.58, 0.62, 0.55, 0.60, 0.64, 0.57, 0.61, 0.56];
+    var cK = [0.08, 0.11, 0.09, 0.07, 0.10, 0.12, 0.08, 0.10];
+    var cD = [0.76, 0.72, 0.78, 0.74, 0.70, 0.77, 0.73, 0.75];
 
     window._indexMouseMove = function (e) {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      cursorEl.style.left = mouseX + 'px';
-      cursorEl.style.top  = mouseY + 'px';
+      mouseX = e.clientX; mouseY = e.clientY;
+      cursorEl.style.left = mouseX + 'px'; cursorEl.style.top = mouseY + 'px';
     };
     window._indexTouchMove = function (e) {
-      var t = e.touches[0];
-      if (!t) return;
-      mouseX = t.clientX;
-      mouseY = t.clientY;
-      cursorEl.style.left = mouseX + 'px';
-      cursorEl.style.top  = mouseY + 'px';
+      var t = e.touches[0]; if (!t) return;
+      mouseX = t.clientX; mouseY = t.clientY;
+      cursorEl.style.left = mouseX + 'px'; cursorEl.style.top = mouseY + 'px';
     };
     document.addEventListener('mousemove', window._indexMouseMove);
     document.addEventListener('touchstart', window._indexTouchMove, { passive: true });
     document.addEventListener('touchmove',  window._indexTouchMove, { passive: true });
 
     var smoothAngle = 0;
+
     function physicsLoop() {
+      var isHovered = document.body.classList.contains('cursor-hover');
+      targetR = isHovered ? HOVER_R : BASE_R;
+
+      // Size springs toward target — slow, weighted (feels like it's expanding in zero-g)
+      currentR += (targetR - currentR) * 0.07;
+
+      // Mass = area ratio squared: hover blob is ~1.9× heavier → much more inertia
+      var sizeScale = currentR / BASE_R;
+      var MASS = sizeScale * sizeScale;
+
+      // Position spring — force divided by mass so bigger = lazier
       var fx = (mouseX - bx) * STIFFNESS;
       var fy = (mouseY - by) * STIFFNESS;
-      var prevVx = vx, prevVy = vy;
       vx = (vx + fx / MASS) * DAMPING;
       vy = (vy + fy / MASS) * DAMPING;
-      ax = vx - prevVx; ay = vy - prevVy;
       bx += vx; by += vy;
-      window._blobPos = { x: bx, y: by };
 
-      followerEl.style.left = (bx - 40) + 'px';
-      followerEl.style.top  = (by - 40) + 'px';
+      // Apply size & position
+      var d = currentR * 2;
+      followerEl.style.width  = Math.round(d) + 'px';
+      followerEl.style.height = Math.round(d) + 'px';
+      followerEl.style.left   = Math.round(bx - currentR) + 'px';
+      followerEl.style.top    = Math.round(by - currentR) + 'px';
 
-      var dx = mouseX - bx, dy = mouseY - by;
-      var pull = Math.sqrt(dx * dx + dy * dy);
-      var rawAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-      var angleDiff = rawAngle - smoothAngle;
-      while (angleDiff >  180) angleDiff -= 360;
-      while (angleDiff < -180) angleDiff += 360;
-      smoothAngle += angleDiff * 0.02;
+      window._blobPos = { x: bx, y: by, r: currentR };
 
-      var isHovered = document.body.classList.contains('cursor-hover');
-      var maxPull = isHovered ? 180 : 320;
-      var f = Math.min(pull / maxPull, 1);
-      var t = Date.now() * 0.001;
-      var accel = Math.sqrt(ax * ax + ay * ay);
-      var jolt  = Math.min(accel * 3, 1);
-      var idle  = (1 - f) * 14;
-      var n0 = Math.sin(t * 1.1) * idle,       n1 = Math.sin(t * 0.8 + 1.2) * idle;
-      var n2 = Math.sin(t * 1.4 + 2.4) * idle, n3 = Math.sin(t * 0.7 + 3.6) * idle;
-      function lerp(a, b, t) { return a + (b - a) * t; }
-      function clamp(v) { return Math.round(Math.max(2, Math.min(96, v))); }
+      // ── Squash & stretch ────────────────────────────────────────────────────
+      // Blob elongates in direction of travel — larger blob squashes more (more fluid)
+      var speed = Math.sqrt(vx * vx + vy * vy);
+      var rawAngle = Math.atan2(vy, vx) * (180 / Math.PI);
+      // Only rotate smoothAngle when actually moving (prevents jitter at rest)
+      if (speed > 0.25) {
+        var angleDiff = rawAngle - smoothAngle;
+        while (angleDiff >  180) angleDiff -= 360;
+        while (angleDiff < -180) angleDiff += 360;
+        smoothAngle += angleDiff * Math.min(speed * 0.04, 0.12);
+      }
+      var stretchAmt = Math.min(speed * 0.038 * sizeScale, 0.42);
+      var sx = 1 / (1 + stretchAmt * 0.6);  // squash perpendicular
+      var sy = 1 + stretchAmt;               // stretch along motion
+      followerEl.style.transform =
+        'rotate(' + smoothAngle.toFixed(1) + 'deg) scale(' + sx.toFixed(3) + ',' + sy.toFixed(3) + ')';
+
+      // ── Organic shape breathing ─────────────────────────────────────────────
+      // Slow sine noise on border-radius — amplitude grows with size and settles when pulled
+      var tt   = Date.now() * 0.001;
+      var pull = Math.sqrt((mouseX - bx) * (mouseX - bx) + (mouseY - by) * (mouseY - by));
+      var f    = Math.min(pull / (isHovered ? 180 : 320), 1);
+      var idleAmp = (1 - f) * 9 * sizeScale;  // bigger blob breathes more visibly
+      var n0 = Math.sin(tt * 0.65)          * idleAmp;
+      var n1 = Math.sin(tt * 0.45 + 1.3)   * idleAmp;
+      var n2 = Math.sin(tt * 0.80 + 2.5)   * idleAmp;
+      var n3 = Math.sin(tt * 0.38 + 3.8)   * idleAmp;
+      function lerp(a, b, u) { return a + (b - a) * u; }
+      function clamp(v) { return Math.round(Math.max(4, Math.min(94, v))); }
       var targets = [
-        clamp(lerp(50+n0,60,f)), clamp(lerp(50+n1,40,f)),
-        clamp(lerp(50+n2,40,f)), clamp(lerp(50+n3,58,f)),
-        clamp(lerp(50+n1,56,f)+jolt*3), clamp(lerp(50+n2,44,f)-jolt*2),
-        clamp(lerp(50+n3,44,f)-jolt*2), clamp(lerp(50+n0,56,f)+jolt*3)
+        clamp(lerp(50+n0, 58, f)), clamp(lerp(50+n1, 42, f)),
+        clamp(lerp(50+n2, 42, f)), clamp(lerp(50+n3, 57, f)),
+        clamp(lerp(50+n1, 55, f)), clamp(lerp(50+n2, 45, f)),
+        clamp(lerp(50+n3, 45, f)), clamp(lerp(50+n0, 55, f))
       ];
-      targets.forEach(function (target, i) {
-        var force = (target - cs[i].p) * cK[i];
+      targets.forEach(function (tgt, i) {
+        var force = (tgt - cs[i].p) * cK[i];
         cs[i].v = (cs[i].v + force) * cD[i];
         cs[i].p += cs[i].v;
       });
-      var R = cs.map(function (s) { return Math.round(Math.max(2, Math.min(96, s.p))); });
+      var R = cs.map(function (s) { return Math.round(Math.max(4, Math.min(94, s.p))); });
       followerEl.style.borderRadius =
         R[0]+'% '+R[1]+'% '+R[2]+'% '+R[3]+'% / '+R[4]+'% '+R[5]+'% '+R[6]+'% '+R[7]+'%';
     }
@@ -2794,7 +2820,7 @@
     }
     window._wrapChars = wrapChars;
 
-    const BLOB_R = 55;
+    const getBlobR = () => (window._blobPos && window._blobPos.r) ? window._blobPos.r : 55;
     let chars = [];
     let loopStarted = false;
 
@@ -2829,7 +2855,7 @@
             const r  = span.getBoundingClientRect();
             const cx = r.left + r.width  / 2;
             const cy = r.top  + r.height / 2;
-            const inside = Math.hypot(x - cx, y - cy) < BLOB_R;
+            const inside = Math.hypot(x - cx, y - cy) < getBlobR();
             if (inside) anyInside = true;
 
             if (span._inside && !inside) {
@@ -5179,9 +5205,9 @@
     let landed  = -1;
     let spinning = false;
 
-    // ~150 frames at visible speed (~30fps start); counter + image both update each frame
+    // 280 frames at 20ms (~50fps) — swift and energetic, counter + image both update each frame
     const SCHEDULE = [
-      [30, 55], [42, 40], [58, 28], [80, 18], [115, 9]
+      [20, 280]
     ];
 
     function spin() {
@@ -5193,7 +5219,7 @@
       img.style.opacity = '1';
       if (counter) counter.textContent = '···· / 2257';
 
-      preload(30);
+      preload(60);
 
       let next;
       do { next = nextIdx(); } while (next === landed && IMAGES.length > 1);

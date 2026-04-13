@@ -97,8 +97,10 @@
   var spReady      = false;
 
   // YouTube
-  var ytPlayer     = null;
-  var ytReady      = false;
+  var ytPlayer      = null;
+  var ytReady       = false;
+  var ytSkipNext    = null;   // set by initYouTube
+  var ytSkipPrev    = null;
 
   function updateBtn() {
     if (isPlaying) { btn.classList.add('playing'); showRing(); }
@@ -144,8 +146,17 @@
   // ── YouTube ────────────────────────────────────────────────────────────────
   function initYouTube(uri) {
     playerEl.innerHTML = '';
-    ytPlayer = null; ytReady = false;
+    ytPlayer = null; ytReady = false; ytSkipNext = null; ytSkipPrev = null;
     var parsed = parseYouTube(uri);
+    // Radio/playlist loaded lazily on skip or when video ends
+    var radioList      = parsed.listId || ('RD' + parsed.videoId);
+    var playlistLoaded = !!parsed.listId;  // explicit playlist already known
+
+    function loadPlaylistNow() {
+      if (playlistLoaded) return;
+      playlistLoaded = true;
+      try { ytPlayer.loadPlaylist({ list: radioList, listType: 'playlist' }); } catch (e) {}
+    }
 
     function createPlayer() {
       var opts = {
@@ -154,9 +165,12 @@
         events: {
           onReady: function (e) {
             ytReady = true;
-            // Load a playlist for skip support: explicit list, or YouTube radio mix (RD+videoId)
-            var list = parsed.listId || ('RD' + parsed.videoId);
-            e.target.cuePlaylist({ list: list, listType: 'playlist' });
+            if (parsed.listId) {
+              // Explicit playlist — cue it from the start
+              e.target.cuePlaylist({ list: parsed.listId, listType: 'playlist', index: 0 });
+            }
+            // No explicit playlist: the videoId from the constructor stays cued —
+            // don't override it with cuePlaylist or it may play a different track first.
             if (userWantsPlaying) {
               e.target.playVideo();
               // Mobile browsers block playVideo() outside a user gesture — detect and guide
@@ -178,10 +192,15 @@
             if (isPlaying && !wasPlaying) {
               try { showToast(ytPlayer.getVideoData().title); } catch (err) {}
             }
+            // Video ended — load radio mix for continuous play
+            if (e.data === YT.PlayerState.ENDED && userWantsPlaying) { loadPlaylistNow(); }
           },
         }
       };
       ytPlayer = new window.YT.Player(playerEl, opts);
+      // Expose skip helpers (playlist loads lazily on first use)
+      ytSkipNext = function () { if (!playlistLoaded) { loadPlaylistNow(); } else { try { ytPlayer.nextVideo(); } catch (e) {} } };
+      ytSkipPrev = function () { if (!playlistLoaded) { try { ytPlayer.seekTo(0); } catch (e) {} } else { try { ytPlayer.previousVideo(); } catch (e) {} } };
     }
 
     if (window.YT && window.YT.Player) {
@@ -227,10 +246,8 @@
     _holdTimer = setTimeout(function () {
       _holdFired = true;
       _holdTimer = null;
-      try {
-        if (activeType === 'youtube' && ytPlayer && ytReady) ytPlayer.nextVideo();
-        else if (activeType === 'spotify' && spController && spReady) spController.nextTrack();
-      } catch (err) {}
+      if (activeType === 'youtube' && ytPlayer && ytReady && ytSkipNext) { ytSkipNext(); }
+      else if (activeType === 'spotify' && spController && spReady) { try { spController.nextTrack(); } catch (err) {} }
       ring.style.background = makeRingGradient();
       showToast('Next ›');
     }, 500);
@@ -293,7 +310,8 @@
       try { if (isNext) spController.nextTrack(); else spController.previousTrack(); } catch (e) {}
       setTimeout(function () { try { spController.play(); } catch (e) {} }, 300);
     } else if (activeType === 'youtube' && ytPlayer && ytReady) {
-      try { if (isNext) ytPlayer.nextVideo(); else ytPlayer.previousVideo(); } catch (e) {}
+      if (isNext && ytSkipNext) ytSkipNext();
+      else if (!isNext && ytSkipPrev) ytSkipPrev();
     }
   });
 
