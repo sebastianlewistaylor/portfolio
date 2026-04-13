@@ -310,79 +310,10 @@
     }
 
     // ── Tall image scroll reveal ──────────────────────────────────────────
-    // RATIO_CLASSES / SPAN_CLASSES / setupTallImg are hoisted to reinitPage scope
-    // so edit-mode wireImg can call setupTallImg on newly added images.
-    const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
-    const SPAN_CLASSES  = ['wide', 'span-2'];
-
-    function setupTallImg(img) {
-        if (img.dataset.tallSetup) return;
-        if (!img.naturalWidth || !img.naturalHeight) return;
-        if (RATIO_CLASSES.some(c => img.classList.contains(c))) return;
-
-        const displayW = img.offsetWidth;
-        if (!displayW) return;
-
-        const vh              = window.innerHeight;
-        const naturalDisplayH = displayW * img.naturalHeight / img.naturalWidth;
-        if (naturalDisplayH <= vh) return;
-
-        img.dataset.tallSetup = '1';
-
-        const navH  = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
-        const frameH = vh - navH;
-
-        const outer = document.createElement('div');
-        outer.className = 'tall-img-outer';
-        outer.style.cssText = `height:${2 * vh}px; position:relative;`;
-        SPAN_CLASSES.forEach(cls => {
-          if (img.classList.contains(cls)) { outer.classList.add(cls); img.classList.remove(cls); }
-        });
-
-        const inner = document.createElement('div');
-        inner.style.cssText = `height:${frameH}px; overflow:hidden; position:sticky; top:${navH}px; background:var(--bg);`;
-
-        img.parentNode.insertBefore(outer, img);
-        outer.appendChild(inner);
-        inner.appendChild(img);
-
-        img.style.position       = 'absolute';
-        img.style.objectFit      = 'fill';
-        img.style.objectPosition = '';
-        img.style.transform      = '';
-
-        function apply(progress) {
-          const p  = Math.min(1, Math.max(0, progress));
-          const iw = img.naturalWidth;
-          const ih = img.naturalHeight;
-          const cw = inner.offsetWidth;
-          const ch = frameH;
-
-          const coverScale   = Math.max(cw / iw, ch / ih);
-          const containScale = Math.min(cw / iw, ch / ih);
-          const scale        = coverScale + (containScale - coverScale) * p;
-
-          const w = Math.round(iw * scale);
-          const h = Math.round(ih * scale);
-
-          img.style.width  = w + 'px';
-          img.style.height = h + 'px';
-          img.style.left   = Math.round((cw - w) / 2) + 'px';
-          img.style.top    = Math.max(0, Math.round((ch - h) / 2)) + 'px';
-          img.style.transform = '';
-        }
-
-        apply(0);
-
-        lenis.on('scroll', () => { apply(-outer.getBoundingClientRect().top / vh); });
-      }
-
-    (function () {
-      document.querySelectorAll('.p-images img').forEach(img => {
-        img.addEventListener('load', () => setupTallImg(img));
-        if (img.complete && img.naturalWidth) setupTallImg(img);
-      });
-    })();
+    document.querySelectorAll('.p-images img').forEach(img => {
+      img.addEventListener('load', () => setupTallImg(img));
+      if (img.complete && img.naturalWidth) setupTallImg(img);
+    });
 
     // ── Edit mode ─────────────────────────────────────────────────────────
     if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
@@ -391,6 +322,49 @@
     if (sessionStorage.getItem('edit-mode') === '1') {
       activateEditMode(accent);
     }
+  }
+
+  // ── Tall image setup — outer scope so activateEditMode can call it on new images ──
+  const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
+  const SPAN_CLASSES  = ['wide', 'span-2'];
+
+  function setupTallImg(img) {
+    if (img.dataset.tallSetup) return;
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    if (RATIO_CLASSES.some(c => img.classList.contains(c))) return;
+    const displayW = img.offsetWidth;
+    if (!displayW) return;
+    const vh = window.innerHeight;
+    if (displayW * img.naturalHeight / img.naturalWidth <= vh) return;
+    img.dataset.tallSetup = '1';
+    const navH   = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
+    const frameH = vh - navH;
+    const outer = document.createElement('div');
+    outer.className = 'tall-img-outer';
+    outer.style.cssText = `height:${2 * vh}px; position:relative;`;
+    SPAN_CLASSES.forEach(cls => {
+      if (img.classList.contains(cls)) { outer.classList.add(cls); img.classList.remove(cls); }
+    });
+    const inner = document.createElement('div');
+    inner.style.cssText = `height:${frameH}px; overflow:hidden; position:sticky; top:${navH}px; background:var(--bg);`;
+    img.parentNode.insertBefore(outer, img);
+    outer.appendChild(inner);
+    inner.appendChild(img);
+    img.style.position = 'absolute'; img.style.objectFit = 'fill';
+    img.style.objectPosition = ''; img.style.transform = '';
+    function apply(p) {
+      p = Math.min(1, Math.max(0, p));
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const cw = inner.offsetWidth, ch = frameH;
+      const scale = Math.max(cw/iw, ch/ih) + (Math.min(cw/iw, ch/ih) - Math.max(cw/iw, ch/ih)) * p;
+      const w = Math.round(iw * scale), h = Math.round(ih * scale);
+      img.style.width = w + 'px'; img.style.height = h + 'px';
+      img.style.left = Math.round((cw - w) / 2) + 'px';
+      img.style.top  = Math.max(0, Math.round((ch - h) / 2)) + 'px';
+      img.style.transform = '';
+    }
+    apply(0);
+    if (lenis) lenis.on('scroll', () => { apply(-outer.getBoundingClientRect().top / vh); });
   }
 
   // ── Edit mode key & function (defined at outer scope, referenced in reinitPage) ───
@@ -758,6 +732,25 @@
       const left = Math.max(10, Math.min(rect.left, window.innerWidth - 340));
       Object.assign(imgPanel.style, { top: top + 'px', left: left + 'px' });
       document.body.appendChild(imgPanel);
+
+      // Drag a file onto the panel to replace the image
+      imgPanel.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); imgPanel.style.outline = `1px dashed ${accent}`; } });
+      imgPanel.addEventListener('dragleave', () => { imgPanel.style.outline = ''; });
+      imgPanel.addEventListener('drop', async e => {
+        e.preventDefault(); imgPanel.style.outline = '';
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+        if (!file) return;
+        const eipUrl = document.getElementById('eip-url');
+        if (eipUrl) { eipUrl.value = 'Uploading…'; }
+        try {
+          const rawUrl = await uploadImageFile(file);
+          img.src = rawUrl;
+          if (eipUrl) eipUrl.value = rawUrl;
+        } catch (err) {
+          if (eipUrl) eipUrl.value = '';
+          alert(err.message === 'no-token' ? 'Paste GitHub token in edit bar first.' : 'Upload failed: ' + err.message);
+        }
+      });
 
       document.getElementById('eip-apply').addEventListener('click', () => {
         const url = document.getElementById('eip-url').value.trim();
