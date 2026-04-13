@@ -622,11 +622,20 @@
     });
 
     // ── Shared image upload helper ─────────────────────────────────────────
+    function bufToBase64(buf) {
+      const bytes = new Uint8Array(buf);
+      let s = '';
+      // Chunk to avoid max-call-stack on large files
+      for (let i = 0; i < bytes.length; i += 8192)
+        s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      return btoa(s);
+    }
+
     async function uploadImageFile(file) {
       const token = localStorage.getItem('gh-edit-token') || '';
       if (!token) throw new Error('no-token');
       const buf = await file.arrayBuffer();
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const b64 = bufToBase64(buf);
       const filename = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
       const res = await fetch(`https://api.github.com/repos/sebastianlewistaylor/portfolio/contents/${filename}`, {
         method: 'PUT',
@@ -846,6 +855,42 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && imgPanel) { imgPanel.remove(); imgPanel = null; }
     });
+
+    // ── Hero drag+drop ────────────────────────────────────────────────────
+    if (heroEl && heroImg) {
+      let heroDragCount = 0;
+      heroEl.addEventListener('dragenter', e => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        if (++heroDragCount === 1) heroEl.style.outline = `2px dashed ${accent}`;
+      });
+      heroEl.addEventListener('dragleave', () => {
+        if (--heroDragCount === 0) heroEl.style.outline = '';
+      });
+      heroEl.addEventListener('dragover', e => {
+        if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+      });
+      heroEl.addEventListener('drop', async e => {
+        e.preventDefault();
+        heroDragCount = 0; heroEl.style.outline = '';
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+        if (!file) return;
+        if (!localStorage.getItem('gh-edit-token')) {
+          alert('Paste a GitHub token in the edit bar first, then drag to upload.');
+          return;
+        }
+        const prev = heroImg.src;
+        heroImg.style.opacity = '0.4';
+        try {
+          const rawUrl = await uploadImageFile(file);
+          heroImg.src = rawUrl;
+          heroImg.style.opacity = '';
+        } catch (err) {
+          heroImg.src = prev; heroImg.style.opacity = '';
+          alert(err.message === 'no-token' ? 'No GitHub token in edit bar.' : 'Upload failed: ' + err.message);
+        }
+      });
+    }
 
     // ── Add/remove gallery images ──────────────────────────────────────────
     document.querySelectorAll('.p-images').forEach(container => {
