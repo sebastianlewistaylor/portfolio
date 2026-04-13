@@ -548,8 +548,9 @@
       });
     });
 
-    // Block all link navigation in edit mode
+    // Block link navigation only when clicking inside an editable field
     document.addEventListener('click', e => {
+      if (!e.target.closest('[contenteditable]')) return;
       const a = e.target.closest('a');
       if (a) { e.preventDefault(); e.stopPropagation(); }
     }, true);
