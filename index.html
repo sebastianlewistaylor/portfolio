@@ -1418,7 +1418,7 @@
       vy = (vy + fy / MASS) * DAMPING;
       ax = vx - prevVx; ay = vy - prevVy;
       bx += vx; by += vy;
-      window._blobPos = { x: bx + 40, y: by + 40 };
+      window._blobPos = { x: bx, y: by };
 
       followerEl.style.left = (bx - 40) + 'px';
       followerEl.style.top  = (by - 40) + 'px';
@@ -2339,7 +2339,7 @@
         }
         el.textContent = out;
         if (frame < totalFrames) requestAnimationFrame(tick);
-        else { el.textContent = final; wrapChars(el); }
+        else { el.textContent = final; if (window._wrapChars) window._wrapChars(el); }
       })();
     }
 
