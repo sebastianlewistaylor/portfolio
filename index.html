@@ -5,7 +5,7 @@
   <title>Sebastian Taylor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=VT323&amp;display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bebas+Neue&family=Cormorant+Garamond&family=Space+Mono&family=Abril+Fatface&family=IM+Fell+English&family=Playfair+Display&family=Bungee+Shade&family=Cinzel&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">
   <style>
     :root {
@@ -2416,17 +2416,18 @@
 
   // ── Hero: typeface scramble on blob pass-over ─────────────────────────────
   (function () {
+    // { f: font-family, w: font-weight }
     const fontPool = [
-      "'Press Start 2P', monospace",
-      "'VT323', monospace",
-      "'Bebas Neue', sans-serif",
-      "'Cormorant Garamond', serif",
-      "'Space Mono', monospace",
-      "'Abril Fatface', cursive",
-      "'IM Fell English', serif",
-      "'Playfair Display', serif",
-      "'Bungee Shade', cursive",
-      "'Cinzel', serif",
+      { f: "'barlow-semi-condensed', sans-serif",  w: '300' },
+      { f: "'slight-chance', serif",               w: '400' },
+      { f: "'neue-haas-unica', sans-serif",         w: '400' },  // Helvetica Neue in kit
+      { f: "'futura-pt', sans-serif",               w: '400' },
+      { f: "'freight-display-pro', serif",          w: '400' },
+      { f: "'roc-grotesk', sans-serif",             w: '400' },
+      { f: "'moret', serif",                        w: '400' },
+      { f: "'Fraunces', serif",                     w: '300' },  // Recoleta alt (Google)
+      { f: "'redaction-50', serif",                 w: '400' },
+      { f: "'scotch-deck', serif",                  w: '300' },
     ];
 
     function wrapChars(el) {
@@ -2466,8 +2467,11 @@
               const current = span._currentFont || '';
               let next;
               do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
-              while (next === current);
-              span.style.fontFamily = next;
+              while (next === current || next.f === (current && current.f));
+              span.style.fontFamily    = next.f;
+              span.style.fontWeight    = next.w;
+              span.style.letterSpacing = 'normal';
+              span.style.fontKerning   = 'normal';
               span._currentFont = next;
 
               // Reset after 2s: brief opacity dip then back to inherited bickham-script
@@ -2475,9 +2479,12 @@
               span._resetTimer = setTimeout(() => {
                 span.style.opacity = '0.35';
                 setTimeout(() => {
-                  span.style.fontFamily = '';
-                  span.style.opacity   = '';
-                  span._currentFont    = '';
+                  span.style.fontFamily    = '';
+                  span.style.fontWeight    = '';
+                  span.style.letterSpacing = '';
+                  span.style.fontKerning   = '';
+                  span.style.opacity       = '';
+                  span._currentFont        = '';
                 }, 220);
               }, 2000);
             }
