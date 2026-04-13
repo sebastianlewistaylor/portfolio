@@ -2303,6 +2303,99 @@
 
   })();
 
+  // ── Hero: character scramble on cursive-top ──────────────────────────────
+  (function () {
+    const el = document.querySelector('.cursive-top');
+    if (!el) return;
+    const final = el.textContent;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&';
+    let started = false;
+
+    function scramble() {
+      if (started) return;
+      started = true;
+      const len = final.length;
+      const resolved = new Array(len).fill(false);
+      let frame = 0;
+      const totalFrames = 42;
+      const resolveStart = 8;
+
+      (function tick() {
+        frame++;
+        let out = '';
+        for (let i = 0; i < len; i++) {
+          if (final[i] === ' ') { out += ' '; continue; }
+          if (resolved[i]) { out += final[i]; continue; }
+          // Stagger resolution: characters resolve left-to-right over last 28 frames
+          const resolveFrame = resolveStart + Math.floor((i / len) * (totalFrames - resolveStart));
+          if (frame >= resolveFrame) {
+            resolved[i] = true;
+            out += final[i];
+          } else {
+            out += chars[Math.floor(Math.random() * chars.length)];
+          }
+        }
+        el.textContent = out;
+        if (frame < totalFrames) requestAnimationFrame(tick);
+        else el.textContent = final;
+      })();
+    }
+
+    // Fire when the .in class lands (existing IntersectionObserver adds it)
+    new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && el.classList.contains('in')) scramble();
+      }
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+
+    // Fallback: if already visible on first paint
+    if (el.classList.contains('in')) scramble();
+  })();
+
+  // ── Hero: 3D depth parallax on #info text layers ─────────────────────────
+  (function () {
+    const section = document.getElementById('info');
+    if (!section) return;
+
+    // Each selector gets a depth multiplier (positive = moves with cursor, negative = against)
+    const layers = [
+      { sel: '.cursive-top',               depth: 0.018 },
+      { sel: '.info-tagline',              depth: 0.010 },
+      { sel: '.info-h1 .reveal-wrap:first-child .reveal-inner', depth: 0.024 },
+      { sel: '.info-h1 .reveal-wrap:last-child .reveal-inner',  depth: 0.014 },
+      { sel: '.info-bio',                  depth: 0.007 },
+      { sel: '.info-caps',                 depth: 0.005 },
+    ];
+
+    const resolved = layers.map(l => ({ el: section.querySelector(l.sel), depth: l.depth })).filter(l => l.el);
+
+    let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+    let rafId = null;
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    document.addEventListener('mousemove', e => {
+      // Normalise to [-1, 1] relative to viewport centre
+      targetX = (e.clientX / window.innerWidth  - 0.5) * 2;
+      targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    });
+
+    function tick() {
+      currentX = lerp(currentX, targetX, 0.06);
+      currentY = lerp(currentY, targetY, 0.06);
+
+      resolved.forEach(({ el, depth }) => {
+        const dx = currentX * window.innerWidth  * depth;
+        const dy = currentY * window.innerHeight * depth;
+        el.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`;
+      });
+
+      const stillMoving = Math.abs(currentX - targetX) > 0.0005 || Math.abs(currentY - targetY) > 0.0005;
+      rafId = stillMoving ? requestAnimationFrame(tick) : null;
+    }
+  })();
+
 </script>
 <script src="music.js"></script>
 
