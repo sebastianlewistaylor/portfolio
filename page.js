@@ -935,6 +935,8 @@
           el.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove?')) el.remove(); });
           container.appendChild(el);
           panel.remove();
+          // Trigger setupTallImg immediately if already cached/complete
+          if (el.tagName === 'IMG' && el.complete && el.naturalWidth) setupTallImg(el);
         }
 
         // File upload → push to GitHub assets/ → use raw URL
@@ -1024,6 +1026,8 @@
           el.dataset.editTarget = 'image';
           el.addEventListener('contextmenu', ev => { ev.preventDefault(); if (confirm('Remove?')) el.remove(); });
           container.appendChild(el);
+          // Trigger setupTallImg immediately if already cached/complete
+          if (el.tagName === 'IMG' && el.complete && el.naturalWidth) setupTallImg(el);
         } catch (err) {
           placeholder.style.color = '#e05555';
           placeholder.textContent = err.message === 'no-token' ? 'No GitHub token in edit bar.' : 'Upload failed: ' + err.message;
