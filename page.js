@@ -21,9 +21,14 @@
 
   // Called by reinitPage when arriving at a project page
   window._enablePageCursor = function () {
+    // Re-acquire elements — handles any edge case where refs went stale
+    cursor   = document.getElementById('cursor');
+    follower = document.getElementById('cursorFollower');
     _tickActive = true;
     // Snap follower physics to current mouse so there's no jump on arrival
     fx = mx; fy = my;
+    // Clear morphed border-radius left by the index physics blob
+    if (follower) follower.style.borderRadius = '';
   };
 
   (function tick() {
@@ -616,6 +621,25 @@
       });
     });
 
+    // ── Shared image upload helper ─────────────────────────────────────────
+    async function uploadImageFile(file) {
+      const token = localStorage.getItem('gh-edit-token') || '';
+      if (!token) throw new Error('no-token');
+      const buf = await file.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const filename = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+      const res = await fetch(`https://api.github.com/repos/sebastianlewistaylor/portfolio/contents/${filename}`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Upload ' + file.name, content: b64 })
+      });
+      if (!res.ok && res.status !== 422) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.message || res.status);
+      }
+      return `https://raw.githubusercontent.com/sebastianlewistaylor/portfolio/main/${filename}`;
+    }
+
     let imgPanel = null;
 
     const heroEl  = document.querySelector('.p-hero');
@@ -864,35 +888,20 @@
           const file = this.files[0];
           if (!file) return;
           const status = panel.querySelector('.eip-upload-status');
-          const token = localStorage.getItem('gh-edit-token') || '';
-          if (!token) {
-            status.style.display = '';
-            status.style.color = '#e05555';
+          if (!localStorage.getItem('gh-edit-token')) {
+            status.style.display = ''; status.style.color = '#e05555';
             status.textContent = 'No GitHub token — paste URL manually instead.';
             return;
           }
           status.style.display = ''; status.style.color = '#888'; status.textContent = 'Uploading…';
           try {
-            const buf = await file.arrayBuffer();
-            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-            const filename = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
-            const res = await fetch(`https://api.github.com/repos/sebastianlewistaylor/portfolio/contents/${filename}`, {
-              method: 'PUT',
-              headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: 'Upload ' + file.name, content: b64 })
-            });
-            if (!res.ok) {
-              const e = await res.json().catch(() => ({}));
-              // 422 = file already exists, get its URL anyway
-              if (res.status !== 422) throw new Error(e.message || res.status);
-            }
-            const rawUrl = `https://raw.githubusercontent.com/sebastianlewistaylor/portfolio/main/${filename}`;
+            const rawUrl = await uploadImageFile(file);
             const img = document.createElement('img');
             img.src = rawUrl;
             wireImg(img);
           } catch (err) {
             status.style.color = '#e05555';
-            status.textContent = 'Upload failed: ' + err.message;
+            status.textContent = err.message === 'no-token' ? 'No GitHub token — paste URL manually instead.' : 'Upload failed: ' + err.message;
           }
         });
 
@@ -918,6 +927,49 @@
       container.querySelectorAll('img').forEach(img => {
         img.title = 'Click: edit  |  Right-click: remove';
         img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+      });
+
+      // ── Drag+drop images directly onto the gallery ─────────────────────
+      let dragCount = 0;
+      container.addEventListener('dragenter', e => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        if (++dragCount === 1) container.style.outline = `2px dashed ${accent}`;
+      });
+      container.addEventListener('dragleave', () => {
+        if (--dragCount === 0) container.style.outline = '';
+      });
+      container.addEventListener('dragover', e => {
+        if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+      });
+      container.addEventListener('drop', async e => {
+        e.preventDefault();
+        dragCount = 0; container.style.outline = '';
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+        if (!file) return;
+        if (!localStorage.getItem('gh-edit-token')) {
+          alert('Paste a GitHub token in the edit bar first, then drag to upload.');
+          return;
+        }
+        // Show a temporary "uploading" placeholder
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = 'display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;height:120px;border:1px dashed rgba(200,194,245,0.3);';
+        placeholder.textContent = 'Uploading…';
+        container.appendChild(placeholder);
+        try {
+          const rawUrl = await uploadImageFile(file);
+          placeholder.remove();
+          const img = document.createElement('img');
+          img.src = rawUrl; img.alt = ''; img.loading = 'lazy';
+          img.dataset.editTarget = 'image';
+          img.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); openImgPanel(img); }, true);
+          img.addEventListener('contextmenu', ev => { ev.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
+          container.appendChild(img);
+        } catch (err) {
+          placeholder.style.color = '#e05555';
+          placeholder.textContent = err.message === 'no-token' ? 'No GitHub token in edit bar.' : 'Upload failed: ' + err.message;
+          setTimeout(() => placeholder.remove(), 4000);
+        }
       });
     });
 
