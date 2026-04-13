@@ -548,6 +548,32 @@
       });
     });
 
+    // Block all link navigation in edit mode
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a');
+      if (a) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+
+    // Option+click on any contenteditable text node → duplicate it inline
+    document.addEventListener('mousedown', e => {
+      if (!e.altKey) return;
+      const el = e.target.closest('[contenteditable="true"]');
+      if (!el) return;
+      e.preventDefault();
+      const clone = el.cloneNode(true);
+      clone.contentEditable = 'true';
+      clone.dataset.editTarget = 'text';
+      el.after(clone);
+      // Place cursor at start of clone
+      const range = document.createRange();
+      range.selectNodeContents(clone);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      clone.focus();
+    }, true);
+
     const LAYOUTS = [
       { label: 'Stack', cls: '' },
       { label: '2×',    cls: 'grid-2' },
@@ -938,11 +964,21 @@
 
     // ── Apply user edits to a clean parsed document ───────────────────────────
     function applyEdits(origDoc) {
-      // Text fields — match by selector + position index
+      // Structural containers — replace wholesale so duplicated/deleted nodes are captured
+      ['.p-meta', '.p-info > div'].forEach(sel => {
+        document.querySelectorAll(sel).forEach((live, i) => {
+          const orig = origDoc.querySelectorAll(sel)[i];
+          if (!orig) return;
+          const c = live.cloneNode(true);
+          c.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
+          orig.innerHTML = c.innerHTML;
+        });
+      });
+
+      // Text fields — match by selector + position index (for fields outside containers above)
       [
         '.p-title', '.p-subtitle', '.p-body',
-        '.p-meta-label', '.p-meta-value', '.p-section-label',
-        '.p-article-title', '.p-article-meta',
+        '.p-section-label', '.p-article-title', '.p-article-meta',
         '.p-next-title', '.p-next-label',
         '.p-back-title', '.p-back-label',
       ].forEach(sel => {
