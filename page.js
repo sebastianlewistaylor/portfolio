@@ -310,11 +310,12 @@
     }
 
     // ── Tall image scroll reveal ──────────────────────────────────────────
-    (function () {
-      const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
-      const SPAN_CLASSES  = ['wide', 'span-2'];
+    // RATIO_CLASSES / SPAN_CLASSES / setupTallImg are hoisted to reinitPage scope
+    // so edit-mode wireImg can call setupTallImg on newly added images.
+    const RATIO_CLASSES = ['ratio-16-9', 'ratio-4-3', 'ratio-1-1', 'ratio-3-4'];
+    const SPAN_CLASSES  = ['wide', 'span-2'];
 
-      function setupTallImg(img) {
+    function setupTallImg(img) {
         if (img.dataset.tallSetup) return;
         if (!img.naturalWidth || !img.naturalHeight) return;
         if (RATIO_CLASSES.some(c => img.classList.contains(c))) return;
@@ -376,6 +377,7 @@
         lenis.on('scroll', () => { apply(-outer.getBoundingClientRect().top / vh); });
       }
 
+    (function () {
       document.querySelectorAll('.p-images img').forEach(img => {
         img.addEventListener('load', () => setupTallImg(img));
         if (img.complete && img.naturalWidth) setupTallImg(img);
@@ -625,9 +627,8 @@
     function bufToBase64(buf) {
       const bytes = new Uint8Array(buf);
       let s = '';
-      // Chunk to avoid max-call-stack on large files
-      for (let i = 0; i < bytes.length; i += 8192)
-        s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      // Plain loop — safe for any file size (no call-stack limit)
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
       return btoa(s);
     }
 
@@ -873,7 +874,7 @@
       heroEl.addEventListener('drop', async e => {
         e.preventDefault();
         heroDragCount = 0; heroEl.style.outline = '';
-        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
         if (!file) return;
         if (!localStorage.getItem('gh-edit-token')) {
           alert('Paste a GitHub token in the edit bar first, then drag to upload.');
@@ -883,7 +884,7 @@
         heroImg.style.opacity = '0.4';
         try {
           const rawUrl = await uploadImageFile(file);
-          heroImg.src = rawUrl;
+          heroImg.src = rawUrl; // hero stays as <img> — just update src (video-as-hero not supported)
           heroImg.style.opacity = '';
         } catch (err) {
           heroImg.src = prev; heroImg.style.opacity = '';
@@ -895,6 +896,7 @@
     // ── Add/remove gallery images ──────────────────────────────────────────
     document.querySelectorAll('.p-images').forEach(container => {
       const addBtn = document.createElement('button');
+      addBtn.className = 'edit-add-img-btn';
       addBtn.textContent = '+ Add Image';
       addBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.35);background:transparent;color:#c8c2f5;padding:4px 12px;cursor:pointer;font-family:inherit;display:block;margin:6px 0;';
 
@@ -907,24 +909,38 @@
         panel.className = 'edit-add-img-panel';
         panel.style.cssText = 'background:#0c0c0c;border:1px solid rgba(200,194,245,0.25);padding:12px 14px;display:flex;flex-direction:column;gap:9px;font-family:Helvetica Neue,sans-serif;margin-bottom:6px;';
         panel.innerHTML = `
-          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Image</div>
+          <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#c8c2f5;">Add Media</div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
             <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Upload file</span>
-            <input type="file" accept="image/*" class="eip-file" style="font-size:10px;color:#888;flex:1;cursor:pointer;">
+            <input type="file" accept="image/*,video/*" class="eip-file" style="font-size:10px;color:#888;flex:1;cursor:pointer;">
           </label>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;white-space:nowrap;">Or URL</span>
-            <input type="text" placeholder="https://…" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
+            <input type="text" placeholder="https://… (image or video)" class="eip-add-url" style="flex:1;background:transparent;border:1px solid rgba(240,237,232,0.15);color:#f0ede8;padding:4px 8px;font-size:10px;font-family:monospace;outline:none;">
             <button class="eip-add-ok" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(200,194,245,0.4);background:transparent;color:#c8c2f5;padding:4px 10px;cursor:pointer;font-family:inherit;">Add</button>
           </div>
           <div class="eip-upload-status" style="font-size:9px;color:#888;display:none;"></div>
         `;
 
-        function wireImg(img) {
-          img.alt = ''; img.loading = 'lazy';
-          img.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(img); }, true);
-          img.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
-          container.appendChild(img);
+        function isVideoUrl(src) {
+          return /\.(mp4|webm|mov|ogg|m4v)(\?|#|$)/i.test(src);
+        }
+        function makeVideoEl(src) {
+          const v = document.createElement('video');
+          v.src = src; v.autoplay = true; v.muted = true; v.loop = true;
+          v.setAttribute('playsinline', ''); v.controls = true;
+          v.style.cssText = 'width:100%;display:block;';
+          return v;
+        }
+        function wireMedia(el) {
+          el.dataset.editTarget = 'image';
+          if (el.tagName === 'IMG') {
+            el.alt = ''; el.loading = 'lazy';
+            el.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openImgPanel(el); }, true);
+            el.addEventListener('load', () => setupTallImg(el));
+          }
+          el.addEventListener('contextmenu', e => { e.preventDefault(); if (confirm('Remove?')) el.remove(); });
+          container.appendChild(el);
           panel.remove();
         }
 
@@ -941,9 +957,8 @@
           status.style.display = ''; status.style.color = '#888'; status.textContent = 'Uploading…';
           try {
             const rawUrl = await uploadImageFile(file);
-            const img = document.createElement('img');
-            img.src = rawUrl;
-            wireImg(img);
+            const el = file.type.startsWith('video/') ? makeVideoEl(rawUrl) : (() => { const img = document.createElement('img'); img.src = rawUrl; return img; })();
+            wireMedia(el);
           } catch (err) {
             status.style.color = '#e05555';
             status.textContent = err.message === 'no-token' ? 'No GitHub token — paste URL manually instead.' : 'Upload failed: ' + err.message;
@@ -951,16 +966,14 @@
         });
 
         const urlInput = panel.querySelector('.eip-add-url');
-        panel.querySelector('.eip-add-ok').addEventListener('click', () => {
+        function addFromUrl() {
           const src = urlInput.value.trim();
           if (!src) return;
-          const img = document.createElement('img');
-          img.src = src;
-          wireImg(img);
-        });
-        urlInput.addEventListener('keydown', e => {
-          if (e.key === 'Enter') { const src = urlInput.value.trim(); if (src) { const img = document.createElement('img'); img.src = src; wireImg(img); } }
-        });
+          const el = isVideoUrl(src) ? makeVideoEl(src) : (() => { const img = document.createElement('img'); img.src = src; return img; })();
+          wireMedia(el);
+        }
+        panel.querySelector('.eip-add-ok').addEventListener('click', addFromUrl);
+        urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addFromUrl(); });
 
         addBtn.after(panel);
         urlInput.focus();
@@ -990,13 +1003,12 @@
       container.addEventListener('drop', async e => {
         e.preventDefault();
         dragCount = 0; container.style.outline = '';
-        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
         if (!file) return;
         if (!localStorage.getItem('gh-edit-token')) {
           alert('Paste a GitHub token in the edit bar first, then drag to upload.');
           return;
         }
-        // Show a temporary "uploading" placeholder
         const placeholder = document.createElement('div');
         placeholder.style.cssText = 'display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#888;height:120px;border:1px dashed rgba(200,194,245,0.3);';
         placeholder.textContent = 'Uploading…';
@@ -1004,12 +1016,21 @@
         try {
           const rawUrl = await uploadImageFile(file);
           placeholder.remove();
-          const img = document.createElement('img');
-          img.src = rawUrl; img.alt = ''; img.loading = 'lazy';
-          img.dataset.editTarget = 'image';
-          img.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); openImgPanel(img); }, true);
-          img.addEventListener('contextmenu', ev => { ev.preventDefault(); if (confirm('Remove this image?')) img.remove(); });
-          container.appendChild(img);
+          let el;
+          if (file.type.startsWith('video/')) {
+            el = document.createElement('video');
+            el.src = rawUrl; el.autoplay = true; el.muted = true; el.loop = true;
+            el.setAttribute('playsinline', ''); el.controls = true;
+            el.style.cssText = 'width:100%;display:block;';
+          } else {
+            el = document.createElement('img');
+            el.src = rawUrl; el.alt = ''; el.loading = 'lazy';
+            el.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); openImgPanel(el); }, true);
+            el.addEventListener('load', () => setupTallImg(el));
+          }
+          el.dataset.editTarget = 'image';
+          el.addEventListener('contextmenu', ev => { ev.preventDefault(); if (confirm('Remove?')) el.remove(); });
+          container.appendChild(el);
         } catch (err) {
           placeholder.style.color = '#e05555';
           placeholder.textContent = err.message === 'no-token' ? 'No GitHub token in edit bar.' : 'Upload failed: ' + err.message;
@@ -1022,6 +1043,7 @@
     const metaSection = document.querySelector('.p-meta');
     if (metaSection) {
       const addMetaBtn = document.createElement('button');
+      addMetaBtn.className = 'edit-meta-add-btn';
       addMetaBtn.textContent = '+ Row';
       addMetaBtn.style.cssText = 'font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(240,237,232,0.12);background:transparent;color:#888;padding:3px 9px;cursor:pointer;font-family:inherit;margin-top:6px;display:block;';
       addMetaBtn.addEventListener('click', () => {
@@ -1088,8 +1110,7 @@
       const clone = document.documentElement.cloneNode(true);
       clone.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
       clone.querySelectorAll('[data-edit-target]').forEach(el => el.removeAttribute('data-edit-target'));
-      clone.querySelectorAll('.edit-layout-bar, .edit-add-img-panel').forEach(el => el.remove());
-      clone.querySelectorAll('button.edit-add-img-btn-outer, button[style*="+ Row"]').forEach(el => el.remove());
+      clone.querySelectorAll('.edit-layout-bar, .edit-add-img-panel, .edit-add-img-btn, .edit-meta-add-btn').forEach(el => el.remove());
       // Strip runtime-injected music player elements (created by music.js, not in static HTML)
       ['music-btn','music-ring','music-toast','yt-music-wrap'].forEach(id => { const el = clone.querySelector('#' + id); if (el) el.remove(); });
       clone.querySelectorAll('.p-hero-wrapper').forEach(wrapper => {
@@ -1122,6 +1143,7 @@
           if (!orig) return;
           const c = live.cloneNode(true);
           c.querySelectorAll('[contenteditable]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-edit-target'); });
+          c.querySelectorAll('.edit-meta-add-btn').forEach(el => el.remove());
           orig.innerHTML = c.innerHTML;
         });
       });
@@ -1159,13 +1181,15 @@
         });
         // Clone images, strip edit UI
         const c = liveContainer.cloneNode(true);
-        c.querySelectorAll('.edit-layout-bar, .edit-add-img-btn-outer, button.edit-img-btn, .edit-add-img-panel').forEach(el => el.remove());
+        c.querySelectorAll('.edit-layout-bar, .edit-add-img-btn-outer, button.edit-img-btn, .edit-add-img-panel, .edit-add-img-btn, .edit-meta-add-btn').forEach(el => el.remove());
         // Strip edit artifacts from images; drop base64/Drive srcs
         c.querySelectorAll('img').forEach(img => {
           img.removeAttribute('title');
           img.removeAttribute('data-edit-target');
           if (img.src.startsWith('data:') || img.src.includes('drive.google.com')) img.remove();
         });
+        // Strip edit attributes from video elements
+        c.querySelectorAll('video').forEach(v => { v.removeAttribute('data-edit-target'); });
         // Unwrap .tall-img-outer back to plain img
         c.querySelectorAll('.tall-img-outer').forEach(outer => {
           const img = outer.querySelector('img');
