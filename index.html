@@ -5,7 +5,7 @@
   <title>Sebastian Taylor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=VT323&amp;display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Space+Mono&family=Bebas+Neue&family=IM+Fell+English&family=Cinzel&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bebas+Neue&family=Cormorant+Garamond&family=Space+Mono&family=Abril+Fatface&family=IM+Fell+English&family=Playfair+Display&family=Bungee+Shade&family=Cinzel&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">
   <style>
     :root {
@@ -2401,15 +2401,15 @@
   // ── Hero: typeface scramble on blob pass-over ─────────────────────────────
   (function () {
     const fontPool = [
-      "'bickham-script-pro-3', Georgia, serif",
+      "'Press Start 2P', monospace",
       "'VT323', monospace",
-      'Georgia, serif',
-      'Impact, sans-serif',
-      "'Courier New', monospace",
-      "'Playfair Display', serif",
-      "'Space Mono', monospace",
       "'Bebas Neue', sans-serif",
+      "'Cormorant Garamond', serif",
+      "'Space Mono', monospace",
+      "'Abril Fatface', cursive",
       "'IM Fell English', serif",
+      "'Playfair Display', serif",
+      "'Bungee Shade', cursive",
       "'Cinzel', serif",
     ];
 
@@ -2446,11 +2446,13 @@
             const inside = Math.hypot(x - cx, y - cy) < BLOB_R;
 
             if (span._inside && !inside) {
-              // Just exited blob — pick a new font, not the current one
+              // Exited blob — pick a font different from whatever is currently showing
+              const current = span._currentFont || '';
               let next;
               do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
-              while (next === span.style.fontFamily);
+              while (next === current);
               span.style.fontFamily = next;
+              span._currentFont = next;
 
               // Reset after 2s: brief opacity dip then back to inherited bickham-script
               clearTimeout(span._resetTimer);
@@ -2459,6 +2461,7 @@
                 setTimeout(() => {
                   span.style.fontFamily = '';
                   span.style.opacity   = '';
+                  span._currentFont    = '';
                 }, 220);
               }, 2000);
             }
