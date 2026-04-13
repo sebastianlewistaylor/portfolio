@@ -294,16 +294,15 @@
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
-      gap: clamp(40px, 5vw, 80px);
+      gap: clamp(40px, 5vw, 72px);
       min-height: calc(100vh - 60px);
       position: relative;
     }
 
-    .info-wrap { flex: 0 0 auto; max-width: 520px; }
+    .info-wrap { flex: 0 0 auto; max-width: 480px; }
 
     .info-right {
-      flex: 1 1 auto;
-      max-width: 400px;
+      flex: 0 0 clamp(380px, 42vw, 600px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -311,44 +310,140 @@
       position: relative;
     }
 
+    /* ── Vintage Mac / arcade bezel ── */
+    .slot-bezel {
+      width: 100%;
+      background: linear-gradient(160deg, #272727 0%, #1c1c1c 60%, #191919 100%);
+      border-radius: 20px;
+      padding: 20px 20px 30px;
+      position: relative;
+      box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.1),
+        inset -2px 0 0 rgba(255,255,255,0.04),
+        inset 2px 0 0 rgba(0,0,0,0.3),
+        0 0 0 1px #111,
+        3px 3px 0 #111,
+        5px 5px 0 #0a0a0a,
+        0 16px 48px rgba(0,0,0,0.85),
+        0 0 80px rgba(0,224,90,0.04);
+    }
+    /* corner screws */
+    .slot-bezel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle 4px at 16px 16px,        #3c3c3c 55%, transparent 56%),
+        radial-gradient(circle 4px at calc(100% - 16px) 16px,        #3c3c3c 55%, transparent 56%),
+        radial-gradient(circle 4px at 16px calc(100% - 16px),        #3c3c3c 55%, transparent 56%),
+        radial-gradient(circle 4px at calc(100% - 16px) calc(100% - 16px), #3c3c3c 55%, transparent 56%);
+      pointer-events: none;
+    }
+    /* bottom chin vents */
+    .slot-bezel::after {
+      content: '';
+      position: absolute;
+      bottom: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 5px;
+      background: repeating-linear-gradient(
+        to right,
+        #111 0px, #111 4px,
+        #2c2c2c 4px, #2c2c2c 7px
+      );
+      border-radius: 2px;
+      opacity: 0.7;
+    }
+
+    /* bezel top strip: LED + brand label */
+    .slot-screen-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px 10px;
+    }
+    .slot-led {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #00e05a;
+      box-shadow: 0 0 5px #00e05a, 0 0 10px rgba(0,224,90,0.6);
+      animation: led-pulse 2.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes led-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 5px #00e05a, 0 0 10px rgba(0,224,90,0.6); }
+      50%       { opacity: 0.35; box-shadow: 0 0 2px #00e05a; }
+    }
+    .slot-brand {
+      font-family: 'VT323', monospace;
+      font-size: 12px;
+      letter-spacing: 0.35em;
+      color: #444;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
     .slot-window {
       width: 100%;
       overflow: hidden;
       position: relative;
-      border: 1px solid var(--border);
-      max-height: 72vh;
+      border-radius: 6px;
+      max-height: 70vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0c0c0c;
+      background: #060606;
+      box-shadow:
+        inset 0 0 0 1px #000,
+        inset 0 2px 8px rgba(0,0,0,0.8),
+        inset 0 0 40px rgba(0,0,0,0.4);
     }
-
-    .slot-window::before,
+    /* scanlines */
+    .slot-window::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.09) 3px,
+        rgba(0,0,0,0.09) 4px
+      );
+      z-index: 3;
+      pointer-events: none;
+      border-radius: 6px;
+    }
+    /* CRT vignette */
     .slot-window::after {
       content: '';
       position: absolute;
-      left: 0; right: 0;
-      height: 80px;
-      z-index: 2;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+      z-index: 4;
       pointer-events: none;
+      border-radius: 6px;
     }
-    .slot-window::before { top: 0;    background: linear-gradient(to bottom, var(--bg), transparent); }
-    .slot-window::after  { bottom: 0; background: linear-gradient(to top,   var(--bg), transparent); }
 
     .slot-img {
       width: 100%;
       height: auto;
       display: block;
       object-fit: contain;
-      max-height: 72vh;
+      max-height: 70vh;
+      position: relative;
+      z-index: 1;
     }
 
-    /* ── Centered SPIN button ── */
+    /* ── SPIN button — centered in hero ── */
     .slot-trigger-wrap {
       position: absolute;
       left: 50%;
-      bottom: clamp(36px, 6vh, 72px);
-      transform: translateX(-50%);
+      top: 50%;
+      transform: translate(-50%, -50%);
       z-index: 10;
       perspective: 600px;
     }
@@ -363,13 +458,13 @@
       font-family: 'VT323', monospace;
       font-size: 28px;
       letter-spacing: 0.26em;
-      padding: 14px 40px 12px;
+      padding: 14px 44px 12px;
       cursor: none;
       text-transform: uppercase;
       white-space: nowrap;
       transform-style: preserve-3d;
       transform: rotateX(0deg) rotateY(0deg) scale(1) translateY(0px);
-      transition: transform 0.12s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.12s ease, background 0.12s ease;
+      transition: transform 0.12s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, text-shadow 0.12s ease;
       text-shadow:
         0 0 10px rgba(0,224,90,0.9),
         0 0 24px rgba(0,224,90,0.4);
@@ -381,33 +476,30 @@
       position: relative;
       user-select: none;
     }
-    .slot-trigger::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border: 1.5px solid rgba(0,224,90,0.15);
-      pointer-events: none;
-      transform: translateZ(-4px);
-    }
     .slot-trigger:hover {
-      background: #0d1a10;
+      background: #00e05a;
+      color: #000;
+      text-shadow: none;
+      border-color: #00e05a;
       box-shadow:
-        0 0 32px rgba(0,224,90,0.5),
-        0 0 64px rgba(0,224,90,0.15),
-        0 6px 0 #003d18,
-        0 8px 24px rgba(0,0,0,0.7),
-        inset 0 1px 0 rgba(0,224,90,0.35);
+        0 0 40px rgba(0,224,90,0.8),
+        0 0 80px rgba(0,224,90,0.25),
+        0 6px 0 #006630,
+        0 8px 28px rgba(0,0,0,0.7),
+        inset 0 1px 0 rgba(255,255,255,0.25);
     }
     .slot-trigger.pressed,
     .slot-trigger:active {
       transform: rotateX(8deg) scale(0.94) translateY(5px) !important;
       box-shadow:
-        0 0 20px rgba(0,224,90,0.4),
+        0 0 20px rgba(0,224,90,0.5),
         0 1px 0 #003d18,
         0 2px 8px rgba(0,0,0,0.6),
-        inset 0 2px 6px rgba(0,0,0,0.6),
-        inset 0 -1px 0 rgba(0,224,90,0.2);
-      background: #060f08;
+        inset 0 3px 8px rgba(0,0,0,0.7),
+        inset 0 -1px 0 rgba(0,224,90,0.15);
+      background: #00c44f;
+      color: #000;
+      text-shadow: none;
     }
     .slot-trigger:disabled {
       opacity: 0.45;
@@ -420,16 +512,16 @@
       will-change: transform;
     }
     .slot-trigger.spinning .slot-icon {
-      animation: slot-spin 0.4s linear infinite;
+      animation: slot-spin 0.35s linear infinite;
     }
     @keyframes slot-spin {
       to { transform: rotate(360deg); }
     }
 
     @media (max-width: 900px) {
-      #info { flex-direction: column; padding-bottom: 100px; }
-      .info-right { max-width: 100%; width: 100%; }
-      .slot-trigger-wrap { bottom: 20px; }
+      #info { flex-direction: column; padding-bottom: 120px; }
+      .info-right { order: -1; max-width: 100%; width: 100%; }
+      .slot-trigger-wrap { top: auto; bottom: 32px; transform: translateX(-50%); }
     }
 
     .cursive-top {
@@ -942,8 +1034,14 @@
     </div>
 
     <div class="info-right" id="infoRight">
-      <div class="slot-window" id="slotWindow">
-        <img class="slot-img" id="slotImg" src="" alt="" loading="eager">
+      <div class="slot-bezel">
+        <div class="slot-screen-top">
+          <span class="slot-led"></span>
+          <span class="slot-brand">FAUX™ — 855</span>
+        </div>
+        <div class="slot-window" id="slotWindow">
+          <img class="slot-img" id="slotImg" src="" alt="" loading="eager">
+        </div>
       </div>
     </div>
 
@@ -3562,10 +3660,11 @@
       }
     }
 
-    // ~100 frames, 3-5s total: fast burst → gradual deceleration
+    // ~300 frames, 8-10s total: full-blur burst → satisfying deceleration
     const SCHEDULE = [
-      [20, 28], [32, 20], [50, 16], [80, 12],
-      [120, 9], [180, 6], [280, 5], [420, 4]
+      [12, 80], [18, 60], [28, 40], [44, 35],
+      [68, 28], [105, 22], [160, 16], [240, 10],
+      [360, 6], [520, 3]
     ];
 
     function spin() {
@@ -3574,7 +3673,7 @@
       btn.disabled = true;
       btn.classList.add('spinning');
 
-      preload(20);
+      preload(30);
 
       let next;
       do { next = Math.floor(Math.random() * IMAGES.length); }
@@ -3628,7 +3727,7 @@
       btn.classList.remove('pressed');
     });
 
-    preload(10);
+    preload(16);
     setTimeout(spin, 700);
   })();
 
