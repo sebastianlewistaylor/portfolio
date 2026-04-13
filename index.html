@@ -5,6 +5,7 @@
   <title>Sebastian Taylor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=VT323&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Space+Mono&family=Bebas+Neue&family=IM+Fell+English&family=Cinzel&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://use.typekit.net/jet0drk.css">
   <style>
     :root {
@@ -1417,6 +1418,7 @@
       vy = (vy + fy / MASS) * DAMPING;
       ax = vx - prevVx; ay = vy - prevVy;
       bx += vx; by += vy;
+      window._blobPos = { x: bx + 40, y: by + 40 };
 
       followerEl.style.left = (bx - 40) + 'px';
       followerEl.style.top  = (by - 40) + 'px';
@@ -2337,7 +2339,7 @@
         }
         el.textContent = out;
         if (frame < totalFrames) requestAnimationFrame(tick);
-        else el.textContent = final;
+        else { el.textContent = final; wrapChars(el); }
       })();
     }
 
@@ -2394,6 +2396,86 @@
       const stillMoving = Math.abs(currentX - targetX) > 0.0005 || Math.abs(currentY - targetY) > 0.0005;
       rafId = stillMoving ? requestAnimationFrame(tick) : null;
     }
+  })();
+
+  // ── Hero: typeface scramble on blob pass-over ─────────────────────────────
+  (function () {
+    const fontPool = [
+      "'bickham-script-pro-3', Georgia, serif",
+      "'VT323', monospace",
+      'Georgia, serif',
+      'Impact, sans-serif',
+      "'Courier New', monospace",
+      "'Playfair Display', serif",
+      "'Space Mono', monospace",
+      "'Bebas Neue', sans-serif",
+      "'IM Fell English', serif",
+      "'Cinzel', serif",
+    ];
+
+    function wrapChars(el) {
+      const text = el.textContent;
+      let html = '';
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === ' ') { html += ' '; continue; }
+        html += `<span class="c-char">${text[i]}</span>`;
+      }
+      el.innerHTML = html;
+    }
+    window._wrapChars = wrapChars;
+
+    const BLOB_R = 55;
+    let chars = [];
+    let loopStarted = false;
+
+    function startLoop() {
+      if (loopStarted) return;
+      loopStarted = true;
+      const el = document.querySelector('.cursive-top');
+      if (!el) return;
+      chars = Array.from(el.querySelectorAll('.c-char'));
+      if (!chars.length) return;
+
+      (function tick() {
+        if (window._blobPos) {
+          const { x, y } = window._blobPos;
+          chars.forEach(span => {
+            const r = span.getBoundingClientRect();
+            const cx = r.left + r.width  / 2;
+            const cy = r.top  + r.height / 2;
+            const inside = Math.hypot(x - cx, y - cy) < BLOB_R;
+
+            if (span._inside && !inside) {
+              // Just exited blob — pick a new font, not the current one
+              let next;
+              do { next = fontPool[Math.floor(Math.random() * fontPool.length)]; }
+              while (next === span.style.fontFamily);
+              span.style.fontFamily = next;
+
+              // Reset after 2s: brief opacity dip then back to inherited bickham-script
+              clearTimeout(span._resetTimer);
+              span._resetTimer = setTimeout(() => {
+                span.style.opacity = '0.35';
+                setTimeout(() => {
+                  span.style.fontFamily = '';
+                  span.style.opacity   = '';
+                }, 220);
+              }, 2000);
+            }
+            span._inside = inside;
+          });
+        }
+        requestAnimationFrame(tick);
+      })();
+    }
+
+    // Wait until scramble has wrapped the chars before starting the loop
+    const observer = new MutationObserver(() => {
+      const el = document.querySelector('.cursive-top');
+      if (el && el.querySelector('.c-char')) { observer.disconnect(); startLoop(); }
+    });
+    const ct = document.querySelector('.cursive-top');
+    if (ct) observer.observe(ct, { childList: true, subtree: false });
   })();
 
 </script>
