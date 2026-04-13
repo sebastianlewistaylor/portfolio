@@ -211,8 +211,11 @@
 
   // ── Hold to skip (mobile) ──────────────────────────────────────────────────
   var _holdTimer = null;
+  var _holdFired = false;
   btn.addEventListener('touchstart', function () {
+    _holdFired = false;
     _holdTimer = setTimeout(function () {
+      _holdFired = true;
       _holdTimer = null;
       try {
         if (activeType === 'youtube' && ytPlayer && ytReady) ytPlayer.nextVideo();
@@ -222,11 +225,15 @@
       showToast('Next ›');
     }, 500);
   }, { passive: true });
-  btn.addEventListener('touchend',    function () { if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; } });
-  btn.addEventListener('touchcancel', function () { if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; } });
+  btn.addEventListener('touchend', function (e) {
+    if (_holdFired) { e.preventDefault(); _holdFired = false; return; }
+    if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; }
+  }, { passive: false });
+  btn.addEventListener('touchcancel', function () { _holdFired = false; if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; } });
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
+    if (_holdFired) { _holdFired = false; return; }
     btn.style.opacity = '0.4';
     setTimeout(function () { btn.style.opacity = ''; }, 120);
 
