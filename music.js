@@ -3,7 +3,7 @@
   if (window._musicPlayer) return;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function storedUri() { return document.body.dataset.musicUri || localStorage.getItem('music-uri') || 'DcNLfwlXGqw'; }
+  function storedUri() { return document.body.dataset.musicUri || localStorage.getItem('music-uri') || ''; }
 
   function detectType(uri) {
     if (!uri) return null;
@@ -209,23 +209,21 @@
   var _stored = storedUri();
   if (_stored) bootPlayer(_stored);
 
-  // ── Double-tap to skip (mobile) ────────────────────────────────────────────
-  var _lastTap = 0;
-  btn.addEventListener('touchend', function (e) {
-    var now = Date.now();
-    if (now - _lastTap < 300) {
-      e.preventDefault(); // suppress the click that follows
+  // ── Hold to skip (mobile) ──────────────────────────────────────────────────
+  var _holdTimer = null;
+  btn.addEventListener('touchstart', function () {
+    _holdTimer = setTimeout(function () {
+      _holdTimer = null;
       try {
         if (activeType === 'youtube' && ytPlayer && ytReady) ytPlayer.nextVideo();
         else if (activeType === 'spotify' && spController && spReady) spController.nextTrack();
       } catch (err) {}
       ring.style.background = makeRingGradient();
       showToast('Next ›');
-      _lastTap = 0;
-    } else {
-      _lastTap = now;
-    }
-  }, { passive: false });
+    }, 500);
+  }, { passive: true });
+  btn.addEventListener('touchend',    function () { if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; } });
+  btn.addEventListener('touchcancel', function () { if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; } });
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   btn.addEventListener('click', function () {
