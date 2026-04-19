@@ -1168,7 +1168,7 @@
           <div class="archive-year">2022</div>
         </div>
       </a>
-    <a class="archive-cell" href="new-project.html" data-color="#c8c2f5" style="display: block; text-decoration: none;"><div class="archive-cell-inner" style="background-image: url(&quot;https://drive.google.com/file/d/1Huw37l2YYmWiKITGp0hwt5Z93POtPuZQ/view?usp=drive_link&quot;);"></div>
+    <a class="archive-cell" href="new-project.html" data-color="#c8c2f5" style="display: block; text-decoration: none;"><div class="archive-cell-inner" style="background-image: url('https://raw.githubusercontent.com/sebastianlewistaylor/portfolio/main/assets/NB-FILM-SCHOOL-THUMB-FINAL.png');"></div>
         <div class="archive-cell-meta">
           <div class="archive-title">Nico Ballesteros / NB Studios Inc.</div>
           <div class="archive-year">2026</div>
@@ -5195,61 +5195,77 @@
       if (counter) counter.textContent = String(idx + 1).padStart(4, '0') + '  /  2257';
     }
 
-    function preload(count) {
-      for (let i = 0; i < count; i++) {
-        const el = new Image();
-        el.src = BASE + IMAGES[nextIdx()];
+    let landed    = -1;
+    let spinning  = false;
+    let readyBatch = null;   // pre-loaded batch waiting to be used
+    let pendingSpin = false; // user clicked spin before batch was ready
+
+    // Pre-pick and pre-load 101 images (100 spin frames + 1 landing).
+    // Calls onReady() once every image is in the browser cache.
+    // excludeIdx: the currently displayed image — final frame will differ.
+    function buildBatch(excludeIdx, onReady) {
+      readyBatch = null;
+      const items = [];
+      for (let i = 0; i < 100; i++) {
+        const idx = nextIdx();
+        items.push({ src: BASE + IMAGES[idx], idx });
       }
+      let finalIdx;
+      do { finalIdx = nextIdx(); } while (finalIdx === excludeIdx && IMAGES.length > 1);
+      const finalItem = { src: BASE + IMAGES[finalIdx], idx: finalIdx };
+
+      let pending = 101;
+      function done() {
+        if (--pending === 0) {
+          readyBatch = { items, finalItem };
+          onReady();
+        }
+      }
+      [...items, finalItem].forEach(item => {
+        const el = new Image();
+        el.onload = el.onerror = done;
+        el.src = item.src;
+      });
     }
 
-    let landed  = -1;
-    let spinning = false;
-
-    // 280 frames at 20ms (~50fps) — swift and energetic, counter + image both update each frame
-    const SCHEDULE = [
-      [20, 280]
-    ];
-
+    // 100 pre-loaded frames at 18ms = 1.8s + 0.7s crossfade ≈ 2.5s total
     function spin() {
       if (spinning) return;
+      if (!readyBatch) { pendingSpin = true; return; } // queued — fires in onReady
+
       spinning = true;
+      pendingSpin = false;
       btn.disabled = true;
       btn.classList.add('spinning');
       img.style.transition = 'none';
       img.style.opacity = '1';
       if (counter) counter.textContent = '···· / 2257';
 
-      preload(60);
+      const { items, finalItem } = readyBatch;
+      readyBatch = null;
 
-      let next;
-      do { next = nextIdx(); } while (next === landed && IMAGES.length > 1);
-      const finalSrc = BASE + IMAGES[next];
-      const pre = new Image(); pre.src = finalSrc;
-
-      const queue = [];
-      SCHEDULE.forEach(([delay, count]) => {
-        for (let i = 0; i < count; i++) queue.push(delay);
-      });
+      // Build the next batch immediately so the next spin is always instant
+      buildBatch(finalItem.idx, () => { if (pendingSpin) spin(); });
 
       let qi = 0;
       function step() {
-        if (qi < queue.length) {
-          const idx = nextIdx();
-          img.src = BASE + IMAGES[idx];
+        if (qi < items.length) {
+          const { src, idx } = items[qi++];
+          img.src = src;
           setCounter(idx);
-          setTimeout(step, queue[qi++]);
+          setTimeout(step, 18);
         } else {
-          // 0.75s crossfade: fade out (0.35s) → swap src → fade in (0.4s)
+          // Crossfade to final: fade out (0.35s) → swap → fade in (0.4s)
           img.style.transition = 'opacity 0.35s ease-in';
           img.style.opacity = '0';
           setTimeout(() => {
-            img.src = finalSrc;
-            setCounter(next);
+            img.src = finalItem.src;
+            setCounter(finalItem.idx);
             img.style.transition = 'opacity 0.4s ease-out';
             requestAnimationFrame(() => requestAnimationFrame(() => {
               img.style.opacity = '1';
             }));
-            landed = next;
+            landed = finalItem.idx;
             spinning = false;
             btn.disabled = false;
             btn.classList.remove('spinning');
@@ -5269,22 +5285,33 @@
       const cy = r.top  + r.height / 2;
       const dx = (e.clientX - cx) / (r.width  / 2);  // -1 to 1
       const dy = (e.clientY - cy) / (r.height / 2);  // -1 to 1
-      const rx =  dy * -10;   // tilt up/down
-      const ry =  dx *  14;   // tilt left/right
+      const rx =  dy * -10;
+      const ry =  dx *  14;
       btn.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.04) translateY(-2px)`;
     });
     btn.addEventListener('mouseleave', () => {
       if (!spinning) btn.style.transform = '';
     });
-    btn.addEventListener('mousedown', () => {
-      btn.classList.add('pressed');
-    });
-    btn.addEventListener('mouseup', () => {
-      btn.classList.remove('pressed');
-    });
+    btn.addEventListener('mousedown', () => { btn.classList.add('pressed'); });
+    btn.addEventListener('mouseup',   () => { btn.classList.remove('pressed'); });
 
-    preload(16);
-    setTimeout(spin, 700);
+    // Start invisible. Build the first batch — show its final image as a
+    // preview while loading, then auto-spin once every frame is cached.
+    img.style.opacity = '0';
+    img.style.transition = 'none';
+
+    buildBatch(-1, () => {
+      // Use the batch's own final image as the entry preview
+      const preview = readyBatch.finalItem;
+      img.src = preview.src;
+      setCounter(preview.idx);
+      landed = preview.idx;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        img.style.transition = 'opacity 0.6s ease-out';
+        img.style.opacity = '1';
+      }));
+      setTimeout(spin, 900); // auto-spin after preview fades in
+    });
   })();
 
 </script>
