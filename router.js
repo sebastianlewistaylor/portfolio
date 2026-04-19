@@ -114,23 +114,20 @@
       var splashEl = document.getElementById('splash');
       if (splashEl) splashEl.remove();
 
+      // Synchronously force-reveal all animated elements right now, before any async
+      // script loading. Fixes blank page on SPA back-nav from archive/project pages:
+      // the IntersectionObserver below misses .reveal-inner elements because they live
+      // inside overflow:hidden .reveal-wrap containers (IO respects clip boundaries and
+      // reports 0% intersection for clipped elements). The inline script's spa-arriving
+      // branch also adds .in, but only fires after ALL external scripts finish loading.
+      // This call is synchronous and eliminates any blank-content window.
+      document.querySelectorAll('.reveal-inner, .fade-up, .line-expand, .cursive-top').forEach(function (el) {
+        el.classList.add('in');
+      });
+
       // Immediately restart index cursor — no external deps needed.
       // _initIndexCursor is defined by index.html on first load and persists on window.
       if (window._initIndexCursor) window._initIndexCursor();
-
-      // Observe reveal elements immediately — fires on next tick for in-viewport elements
-      // without waiting for ScrollTrigger to load. Fixes black page on SPA back-nav
-      // without touching cursor elements or blocking the RAF loop.
-      (function () {
-        var obs = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) { entry.target.classList.add('in'); obs.unobserve(entry.target); }
-          });
-        }, { threshold: 0.15 });
-        document.querySelectorAll('.reveal-inner, .fade-up, .line-expand, .cursive-top').forEach(function (el) {
-          obs.observe(el);
-        });
-      })();
 
       // Re-execute index scripts — external first, inline after all external have loaded.
       // This ensures ScrollTrigger (not present on project pages) is ready before
