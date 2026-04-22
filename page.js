@@ -315,6 +315,9 @@
       if (img.complete && img.naturalWidth) setupTallImg(img);
     });
 
+    // ── Scope entry zoom-to-split ─────────────────────────────────────────
+    setupScopeEntries();
+
     // ── Edit mode ─────────────────────────────────────────────────────────
     if (new URLSearchParams(window.location.search).get('edit') === EDIT_KEY) {
       sessionStorage.setItem('edit-mode', '1');
@@ -365,6 +368,63 @@
     }
     apply(0);
     if (lenis) lenis.on('scroll', () => { apply(-outer.getBoundingClientRect().top / vh); });
+  }
+
+  // ── Scope entry: zoom-to-split scroll animation ──────────────────────────
+  function setupScopeEntries() {
+    const entries = document.querySelectorAll('.scope-entry-outer');
+    if (!entries.length) return;
+
+    const navH   = (document.querySelector('.p-nav') || {}).offsetHeight || 73;
+    const frameH = window.innerHeight - navH;
+
+    function eio(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    entries.forEach(outer => {
+      const sticky  = outer.querySelector('.scope-entry-sticky');
+      const imgWrap = outer.querySelector('.scope-entry-img');
+      const img     = outer.querySelector('.scope-entry-img img');
+      const text    = outer.querySelector('.scope-entry-text');
+
+      sticky.style.top    = navH + 'px';
+      sticky.style.height = frameH + 'px';
+
+      function applyEntry(progress) {
+        progress = clamp(progress, 0, 1);
+        const zoomP  = eio(clamp(progress / 0.4, 0, 1));
+        const splitP = eio(clamp((progress - 0.4) / 0.32, 0, 1));
+
+        if (img.naturalWidth) {
+          const iw = img.naturalWidth, ih = img.naturalHeight;
+          const cw = imgWrap.offsetWidth, ch = frameH;
+          const coverScale   = Math.max(cw / iw, ch / ih);
+          const containScale = Math.min(cw / iw, ch / ih);
+          const scale = coverScale + (containScale - coverScale) * zoomP;
+          const w = Math.round(iw * scale), h = Math.round(ih * scale);
+          img.style.width  = w + 'px';
+          img.style.height = h + 'px';
+          img.style.left   = Math.round((cw - w) / 2) + 'px';
+          img.style.top    = Math.max(0, Math.round((ch - h) / 2)) + 'px';
+        }
+
+        imgWrap.style.width      = (100 - 43 * splitP) + '%';
+        text.style.opacity       = splitP;
+        text.style.transform     = `translateX(${(1 - splitP) * 2.5}rem)`;
+        text.style.pointerEvents = splitP > 0.5 ? 'auto' : 'none';
+      }
+
+      function getProgress() {
+        const rect  = outer.getBoundingClientRect();
+        const total = outer.offsetHeight - window.innerHeight;
+        return total > 0 ? clamp(-rect.top / total, 0, 1) : 0;
+      }
+
+      if (img.complete && img.naturalWidth) applyEntry(getProgress());
+      img.addEventListener('load', () => applyEntry(getProgress()));
+      window.addEventListener('resize', () => applyEntry(getProgress()), { passive: true });
+      if (lenis) lenis.on('scroll', () => applyEntry(getProgress()));
+    });
   }
 
   // ── Edit mode key & function (defined at outer scope, referenced in reinitPage) ───
