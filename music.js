@@ -88,8 +88,25 @@
 
   // ── State ──────────────────────────────────────────────────────────────────
   var isPlaying        = false;
-  var userWantsPlaying = sessionStorage.getItem('music-state') === 'playing';
+  // Default to playing on first site entry. Only stay paused if the user
+  // explicitly paused this session.
+  var userWantsPlaying = sessionStorage.getItem('music-state') !== 'paused';
   var activeType       = null; // 'spotify' | 'youtube'
+
+  // First-gesture fallback: browsers usually block autoplay until the user
+  // interacts. If the autoplay attempt was blocked, kick playback off on the
+  // first click/touch/keydown anywhere on the page.
+  function attachFirstGestureStart() {
+    var events = ['pointerdown', 'touchstart', 'keydown'];
+    function start() {
+      events.forEach(function (ev) { window.removeEventListener(ev, start, true); });
+      if (!userWantsPlaying || isPlaying) return;
+      if (activeType === 'spotify' && spController && spReady) { try { spController.play(); } catch (e) {} }
+      else if (activeType === 'youtube' && ytPlayer && ytReady) { try { ytPlayer.playVideo(); } catch (e) {} }
+    }
+    events.forEach(function (ev) { window.addEventListener(ev, start, true); });
+  }
+  attachFirstGestureStart();
 
   // Spotify
   var _IFrameAPI   = null;
