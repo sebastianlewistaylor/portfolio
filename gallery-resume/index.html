@@ -44,12 +44,97 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.7  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.85'/></svg>");
   }
 
-  .cursor{position:fixed;top:0;left:0;width:8px;height:8px;border-radius:50%;background:var(--ember);
-    pointer-events:none;z-index:1100;transform:translate(-50%,-50%);
-    transition:width .22s cubic-bezier(.22,1,.36,1),height .22s cubic-bezier(.22,1,.36,1),background .22s;
-    mix-blend-mode:difference;display:none}
-  .cursor.show{display:block}
-  .cursor.hover{width:34px;height:34px;background:var(--ember-soft)}
+  /* ─── Wall-label cursor — a museum didactic that trails the pointer.
+        Updates its tombstone metadata as you cross sections; tilts -0.9°
+        like it's hand-placed next to the work. ─── */
+  .cursor{
+    position:fixed; top:0; left:0;
+    width: 248px;
+    pointer-events:none; z-index:1100;
+    opacity:0; visibility:hidden;
+    transition: opacity .28s ease, visibility 0s linear .28s;
+    will-change: transform;
+  }
+  .cursor.show{
+    opacity:1; visibility:visible;
+    transition: opacity .28s ease;
+  }
+  .cursor-card{
+    background: var(--cream);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    padding: 13px 14px 12px;
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.10),
+      0 16px 28px -14px rgba(0,0,0,0.45),
+      0 2px 0 rgba(155,139,110,0.18);
+    position: relative;
+    transform: rotate(-0.9deg);
+    transition: transform .35s cubic-bezier(.22,1,.36,1);
+  }
+  /* Ember push-pin marking the cursor anchor — like a brass-tack on a label */
+  .cursor-card::before{
+    content:'';
+    position:absolute;
+    top:-8px; left:-8px;
+    width:9px; height:9px;
+    border-radius:50%;
+    background: var(--ember);
+    box-shadow:
+      0 0 0 1.5px var(--ink),
+      0 0 10px rgba(226,88,34,.55),
+      inset 0 1px 1px rgba(255,255,255,.5);
+  }
+  .cursor .cat-no{
+    font-family:'Geist Mono', ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--ember);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .cursor .cat-no::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background: rgba(14,13,10,.22);
+  }
+  .cursor .cur-title{
+    font-family:'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 19px;
+    line-height: 1.05;
+    letter-spacing: -.012em;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .cursor .cur-meta{
+    font-family:'Geist', sans-serif;
+    font-size: 11px;
+    line-height: 1.38;
+    color: var(--graphite);
+    margin-bottom: 9px;
+  }
+  .cursor .cur-medium{
+    font-family:'Geist Mono', ui-monospace, monospace;
+    font-size: 8.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--brass);
+    padding-top: 8px;
+    border-top: 0.5px solid rgba(14,13,10,.28);
+    line-height: 1.45;
+  }
+  /* When over a clickable target, the card lifts and the tilt straightens */
+  .cursor.hot .cursor-card{
+    transform: rotate(0.4deg) translateY(-2px);
+  }
+  .cursor.hot .cat-no{ color: var(--ink); }
+  .cursor.hot .cat-no::after{ background: var(--ember); }
 
   .slate{
     position:fixed;top:0;left:0;right:0;z-index:60;
@@ -463,7 +548,14 @@
 <body>
 
 <div class="grain"></div>
-<div class="cursor" id="cursor"></div>
+<div class="cursor" id="cursor" aria-hidden="true">
+  <div class="cursor-card">
+    <div class="cat-no">CAT. 00</div>
+    <div class="cur-title">Title Plate</div>
+    <div class="cur-meta">Sebastian L. Taylor &middot; 2026</div>
+    <div class="cur-medium">Web &middot; HTML / CSS / JS &middot; dimensions variable</div>
+  </div>
+</div>
 
 <header class="slate">
   <div class="slate-line"><span class="slate-label">Applicant</span><span class="slate-val">Sebastian L. Taylor</span></div>
@@ -874,23 +966,128 @@
   },{threshold:.12, rootMargin:"0px 0px -40px 0px"});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
+  /* ─── Wall-label cursor — contextual tombstone metadata, flips quadrants near edges ─── */
   const cursor = document.getElementById('cursor');
   const isFine = window.matchMedia('(pointer: fine)').matches;
   if(isFine){
-    cursor.classList.add('show');
-    let x=0,y=0,tx=0,ty=0;
-    document.addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; });
-    const tick = ()=>{
-      x += (tx - x) * .22;
-      y += (ty - y) * .22;
-      cursor.style.transform = `translate(${x}px, ${y}px) translate(-50%,-50%)`;
-      requestAnimationFrame(tick);
-    };
-    tick();
-    document.querySelectorAll('a, .reel-card, .row, .tag').forEach(el=>{
-      el.addEventListener('mouseenter', ()=>cursor.classList.add('hover'));
-      el.addEventListener('mouseleave', ()=>cursor.classList.remove('hover'));
+    const catEl    = cursor.querySelector('.cat-no');
+    const titleEl  = cursor.querySelector('.cur-title');
+    const metaEl   = cursor.querySelector('.cur-meta');
+    const mediumEl = cursor.querySelector('.cur-medium');
+
+    /* Tombstone labels — checked in order; first match wins.
+       Interactive targets come BEFORE section containers so they take priority. */
+    const labels = [
+      { sel: '.reel-card', hot: true,
+        cat: 'CAT. ★', title: 'Project Card',
+        meta: 'Hover any tile · click to expand',
+        medium: 'Interactive · brand · editorial · print' },
+      { sel: 'a[href^="mailto:"]', hot: true,
+        cat: 'CONTACT', title: 'Correspondence',
+        meta: 'slt4441@gmail.com',
+        medium: 'Direct · email · response 24–48h' },
+      { sel: 'a[href^="tel:"]', hot: true,
+        cat: 'CONTACT', title: 'Telephone',
+        meta: 'San Francisco · Pacific time',
+        medium: 'Voice · call or text' },
+      { sel: 'a', hot: true,
+        cat: 'NOTE', title: 'External link',
+        meta: 'Follow to source',
+        medium: 'Interactive · navigation' },
+      { sel: '.hero',
+        cat: 'CAT. 00', title: 'Title Plate',
+        meta: 'Sebastian L. Taylor · 2026',
+        medium: 'Instrument Serif · Geist Black · dimensions variable' },
+      { sel: '.marquee',
+        cat: 'CAT. 01', title: 'Marquee',
+        meta: 'Capabilities at a glance · looping',
+        medium: 'CSS keyframes · 48s linear · continuous' },
+      { sel: '#reel',
+        cat: 'CAT. 02', title: 'Reel',
+        meta: 'Selected projects · 2019–2026',
+        medium: 'Editorial · brand · print · web' },
+      { sel: '#experience',
+        cat: 'CAT. 03', title: 'Experience',
+        meta: 'Employment & engagements · 2019–2026',
+        medium: 'Curatorial · production · direction' },
+      { sel: '#capabilities',
+        cat: 'CAT. 04', title: 'Capabilities',
+        meta: 'Practice areas · ongoing',
+        medium: 'Install · liaison · documentation · social' },
+      { sel: '#tools',
+        cat: 'CAT. 05', title: 'Tools',
+        meta: 'Software & platforms · daily',
+        medium: 'Adobe CS · Shopify · Squarespace · Mailchimp' },
+      { sel: '#education',
+        cat: 'CAT. 06', title: 'Education',
+        meta: 'Cal Poly Humboldt · BA Studio Art · 2024',
+        medium: 'Honors thesis · gallery practicum' },
+      { sel: '#availability',
+        cat: 'CAT. 07', title: 'Availability',
+        meta: 'San Francisco · in-person & remote',
+        medium: 'Open to in-house gallery roles · 2026 →' },
+      { sel: '.slate',
+        cat: 'SLATE', title: 'Caption Strip',
+        meta: 'Resume slate · applicant Sebastian L. Taylor',
+        medium: 'Geist Mono · fixed-position chrome' },
+      { sel: 'footer, .end',
+        cat: 'END.', title: 'Colophon',
+        meta: 'End of plate · thank you for looking',
+        medium: 'Set in Instrument Serif & Geist · 2026' },
+    ];
+
+    function setLabel(info){
+      catEl.textContent    = info.cat;
+      titleEl.textContent  = info.title;
+      metaEl.textContent   = info.meta;
+      mediumEl.textContent = info.medium;
+      cursor.classList.toggle('hot', !!info.hot);
+    }
+
+    let mouseX = 0, mouseY = 0, curX = -200, curY = -200;
+    let currentSel = null;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      if(!cursor.classList.contains('show')) cursor.classList.add('show');
+
+      for(const lbl of labels){
+        if(e.target.closest(lbl.sel)){
+          if(currentSel !== lbl.sel){
+            setLabel(lbl);
+            currentSel = lbl.sel;
+          }
+          return;
+        }
+      }
+      /* Off any tracked section — show resume's overall plate */
+      if(currentSel !== null){
+        setLabel({ cat:'CAT. 00', title:'Title Plate',
+          meta:'Sebastian L. Taylor · 2026',
+          medium:'Web · HTML / CSS / JS · dimensions variable' });
+        currentSel = null;
+      }
     });
+
+    document.addEventListener('mouseleave', () => cursor.classList.remove('show'));
+
+    const margin = 22;
+    function tick(){
+      curX += (mouseX - curX) * 0.16;
+      curY += (mouseY - curY) * 0.16;
+
+      /* Edge flip — keep the label fully on-screen */
+      const w = cursor.offsetWidth || 248;
+      const h = cursor.offsetHeight || 110;
+      let offX = margin, offY = margin;
+      if(curX + w + margin > window.innerWidth)  offX = -w - margin;
+      if(curY + h + margin > window.innerHeight) offY = -h - margin;
+
+      cursor.style.transform = `translate(${(curX + offX).toFixed(1)}px, ${(curY + offY).toFixed(1)}px)`;
+      requestAnimationFrame(tick);
+    }
+    tick();
   }
 </script>
 
