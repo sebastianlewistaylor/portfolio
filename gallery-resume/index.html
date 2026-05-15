@@ -44,97 +44,35 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.7  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.85'/></svg>");
   }
 
-  /* ─── Wall-label cursor — a museum didactic that trails the pointer.
-        Updates its tombstone metadata as you cross sections; tilts -0.9°
-        like it's hand-placed next to the work. ─── */
+  /* ─── Readymade cursor — a tiny porcelain fixture tilts toward the direction
+        of motion; lies flat by default (Fountain, 1917), snaps upright when
+        hovering an interactive target (art → object). A small "R.M." mark
+        in the corner signs the conceit. ─── */
   .cursor{
     position:fixed; top:0; left:0;
-    width: 248px;
+    width: 38px; height: 38px;
     pointer-events:none; z-index:1100;
     opacity:0; visibility:hidden;
-    transition: opacity .28s ease, visibility 0s linear .28s;
+    transition: opacity .25s ease, visibility 0s linear .25s;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
     will-change: transform;
   }
   .cursor.show{
     opacity:1; visibility:visible;
-    transition: opacity .28s ease;
+    transition: opacity .25s ease;
   }
-  .cursor-card{
-    background: var(--cream);
-    color: var(--ink);
-    border: 1px solid var(--ink);
-    padding: 13px 14px 12px;
-    box-shadow:
-      0 1px 0 rgba(0,0,0,0.10),
-      0 16px 28px -14px rgba(0,0,0,0.45),
-      0 2px 0 rgba(155,139,110,0.18);
-    position: relative;
-    transform: rotate(-0.9deg);
-    transition: transform .35s cubic-bezier(.22,1,.36,1);
+  .cursor-inner{
+    width:100%; height:100%;
+    transform: rotate(var(--urinal-angle, 90deg));
+    transform-origin: 50% 50%;
   }
-  /* Ember push-pin marking the cursor anchor — like a brass-tack on a label */
-  .cursor-card::before{
-    content:'';
-    position:absolute;
-    top:-8px; left:-8px;
-    width:9px; height:9px;
-    border-radius:50%;
-    background: var(--ember);
-    box-shadow:
-      0 0 0 1.5px var(--ink),
-      0 0 10px rgba(226,88,34,.55),
-      inset 0 1px 1px rgba(255,255,255,.5);
+  /* Hover state — straighten upright (a usable object), scale up slightly.
+     CSS takeover from JS rotation; transitions smoothly between states. */
+  .cursor.hot .cursor-inner{
+    transform: rotate(0deg) scale(1.18);
+    transition: transform .42s cubic-bezier(.34,1.56,.64,1);
   }
-  .cursor .cat-no{
-    font-family:'Geist Mono', ui-monospace, monospace;
-    font-size: 9px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--ember);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-  .cursor .cat-no::after{
-    content:'';
-    flex:1;
-    height:1px;
-    background: rgba(14,13,10,.22);
-  }
-  .cursor .cur-title{
-    font-family:'Instrument Serif', serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 19px;
-    line-height: 1.05;
-    letter-spacing: -.012em;
-    color: var(--ink);
-    margin-bottom: 5px;
-  }
-  .cursor .cur-meta{
-    font-family:'Geist', sans-serif;
-    font-size: 11px;
-    line-height: 1.38;
-    color: var(--graphite);
-    margin-bottom: 9px;
-  }
-  .cursor .cur-medium{
-    font-family:'Geist Mono', ui-monospace, monospace;
-    font-size: 8.5px;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: var(--brass);
-    padding-top: 8px;
-    border-top: 0.5px solid rgba(14,13,10,.28);
-    line-height: 1.45;
-  }
-  /* When over a clickable target, the card lifts and the tilt straightens */
-  .cursor.hot .cursor-card{
-    transform: rotate(0.4deg) translateY(-2px);
-  }
-  .cursor.hot .cat-no{ color: var(--ink); }
-  .cursor.hot .cat-no::after{ background: var(--ember); }
+  .cursor svg{ display:block; width:100%; height:100%; overflow:visible; }
 
   .slate{
     position:fixed;top:0;left:0;right:0;z-index:60;
@@ -549,11 +487,20 @@
 
 <div class="grain"></div>
 <div class="cursor" id="cursor" aria-hidden="true">
-  <div class="cursor-card">
-    <div class="cat-no">CAT. 00</div>
-    <div class="cur-title">Title Plate</div>
-    <div class="cur-meta">Sebastian L. Taylor &middot; 2026</div>
-    <div class="cur-medium">Web &middot; HTML / CSS / JS &middot; dimensions variable</div>
+  <div class="cursor-inner">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body — wider at top, narrower at bottom; simplified readymade silhouette -->
+      <path d="M 20 4 C 29 4, 35 9, 35 18 C 35 26, 31 31, 27 33 L 24 36 L 16 36 L 13 33 C 9 31, 5 26, 5 18 C 5 9, 11 4, 20 4 Z"
+            fill="#E8E2D5" stroke="#0E0D0A" stroke-width="1.4" stroke-linejoin="round"/>
+      <!-- Rim ellipse — perspective hint, the basin's opening -->
+      <ellipse cx="20" cy="8.5" rx="11.5" ry="2.6"
+               fill="none" stroke="#0E0D0A" stroke-width="1" opacity="0.7"/>
+      <!-- Drain — the famous orifice, in ember -->
+      <circle cx="20" cy="28" r="2.2" fill="#E25822"/>
+      <!-- R.M. signature — Duchamp's pseudonym, in italic ember -->
+      <text x="4" y="38.5" font-family="Georgia, 'Times New Roman', serif"
+            font-style="italic" font-weight="700" font-size="6" fill="#E25822">R.M.</text>
+    </svg>
   </div>
 </div>
 
@@ -966,125 +913,56 @@
   },{threshold:.12, rootMargin:"0px 0px -40px 0px"});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* ─── Wall-label cursor — contextual tombstone metadata, flips quadrants near edges ─── */
+  /* ─── Readymade cursor — porcelain fixture tilts toward direction of motion.
+        Default pose: horizontal (Fountain, 1917). Over interactive: snaps upright. ─── */
   const cursor = document.getElementById('cursor');
   const isFine = window.matchMedia('(pointer: fine)').matches;
   if(isFine){
-    const catEl    = cursor.querySelector('.cat-no');
-    const titleEl  = cursor.querySelector('.cur-title');
-    const metaEl   = cursor.querySelector('.cur-meta');
-    const mediumEl = cursor.querySelector('.cur-medium');
-
-    /* Tombstone labels — checked in order; first match wins.
-       Interactive targets come BEFORE section containers so they take priority. */
-    const labels = [
-      { sel: '.reel-card', hot: true,
-        cat: 'CAT. ★', title: 'Project Card',
-        meta: 'Hover any tile · click to expand',
-        medium: 'Interactive · brand · editorial · print' },
-      { sel: 'a[href^="mailto:"]', hot: true,
-        cat: 'CONTACT', title: 'Correspondence',
-        meta: 'slt4441@gmail.com',
-        medium: 'Direct · email · response 24–48h' },
-      { sel: 'a[href^="tel:"]', hot: true,
-        cat: 'CONTACT', title: 'Telephone',
-        meta: 'San Francisco · Pacific time',
-        medium: 'Voice · call or text' },
-      { sel: 'a', hot: true,
-        cat: 'NOTE', title: 'External link',
-        meta: 'Follow to source',
-        medium: 'Interactive · navigation' },
-      { sel: '.hero',
-        cat: 'CAT. 00', title: 'Title Plate',
-        meta: 'Sebastian L. Taylor · 2026',
-        medium: 'Instrument Serif · Geist Black · dimensions variable' },
-      { sel: '.marquee',
-        cat: 'CAT. 01', title: 'Marquee',
-        meta: 'Capabilities at a glance · looping',
-        medium: 'CSS keyframes · 48s linear · continuous' },
-      { sel: '#reel',
-        cat: 'CAT. 02', title: 'Reel',
-        meta: 'Selected projects · 2019–2026',
-        medium: 'Editorial · brand · print · web' },
-      { sel: '#experience',
-        cat: 'CAT. 03', title: 'Experience',
-        meta: 'Employment & engagements · 2019–2026',
-        medium: 'Curatorial · production · direction' },
-      { sel: '#capabilities',
-        cat: 'CAT. 04', title: 'Capabilities',
-        meta: 'Practice areas · ongoing',
-        medium: 'Install · liaison · documentation · social' },
-      { sel: '#tools',
-        cat: 'CAT. 05', title: 'Tools',
-        meta: 'Software & platforms · daily',
-        medium: 'Adobe CS · Shopify · Squarespace · Mailchimp' },
-      { sel: '#education',
-        cat: 'CAT. 06', title: 'Education',
-        meta: 'Cal Poly Humboldt · BA Studio Art · 2024',
-        medium: 'Honors thesis · gallery practicum' },
-      { sel: '#availability',
-        cat: 'CAT. 07', title: 'Availability',
-        meta: 'San Francisco · in-person & remote',
-        medium: 'Open to in-house gallery roles · 2026 →' },
-      { sel: '.slate',
-        cat: 'SLATE', title: 'Caption Strip',
-        meta: 'Resume slate · applicant Sebastian L. Taylor',
-        medium: 'Geist Mono · fixed-position chrome' },
-      { sel: 'footer, .end',
-        cat: 'END.', title: 'Colophon',
-        meta: 'End of plate · thank you for looking',
-        medium: 'Set in Instrument Serif & Geist · 2026' },
-    ];
-
-    function setLabel(info){
-      catEl.textContent    = info.cat;
-      titleEl.textContent  = info.title;
-      metaEl.textContent   = info.meta;
-      mediumEl.textContent = info.medium;
-      cursor.classList.toggle('hot', !!info.hot);
-    }
-
-    let mouseX = 0, mouseY = 0, curX = -200, curY = -200;
-    let currentSel = null;
+    let mouseX = 0, mouseY = 0;
+    let curX = -100, curY = -100;
+    let lastX = 0, lastY = 0;
+    let angle = 90, targetAngle = 90;  /* 90° = laid flat, top pointing right (Fountain pose) */
 
     document.addEventListener('mousemove', (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
       if(!cursor.classList.contains('show')) cursor.classList.add('show');
-
-      for(const lbl of labels){
-        if(e.target.closest(lbl.sel)){
-          if(currentSel !== lbl.sel){
-            setLabel(lbl);
-            currentSel = lbl.sel;
-          }
-          return;
-        }
-      }
-      /* Off any tracked section — show resume's overall plate */
-      if(currentSel !== null){
-        setLabel({ cat:'CAT. 00', title:'Title Plate',
-          meta:'Sebastian L. Taylor · 2026',
-          medium:'Web · HTML / CSS / JS · dimensions variable' });
-        currentSel = null;
-      }
     });
 
     document.addEventListener('mouseleave', () => cursor.classList.remove('show'));
 
-    const margin = 22;
+    /* Interactive targets — snap upright while hovering. CSS .hot overrides
+       the JS-driven rotation with a transitioned rotate(0deg) scale(1.18). */
+    document.querySelectorAll('a, button, .reel-card, .row, .tag').forEach((el) => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hot'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hot'));
+    });
+
+    /* Mouse-velocity → rotation. The urinal's top points in the direction
+       of motion (atan2 + 90° because the SVG's "top" is at viewBox y=0,
+       and CSS rotation is clockwise from up). Lerps with shortest-arc
+       interpolation so the fixture doesn't spin the long way around. */
     function tick(){
-      curX += (mouseX - curX) * 0.16;
-      curY += (mouseY - curY) * 0.16;
+      curX += (mouseX - curX) * 0.20;
+      curY += (mouseY - curY) * 0.20;
 
-      /* Edge flip — keep the label fully on-screen */
-      const w = cursor.offsetWidth || 248;
-      const h = cursor.offsetHeight || 110;
-      let offX = margin, offY = margin;
-      if(curX + w + margin > window.innerWidth)  offX = -w - margin;
-      if(curY + h + margin > window.innerHeight) offY = -h - margin;
+      const vx = mouseX - lastX;
+      const vy = mouseY - lastY;
+      const speed = Math.hypot(vx, vy);
 
-      cursor.style.transform = `translate(${(curX + offX).toFixed(1)}px, ${(curY + offY).toFixed(1)}px)`;
+      if(speed > 1.6){
+        targetAngle = Math.atan2(vy, vx) * 180 / Math.PI + 90;
+      }
+
+      /* Shortest-path angle interpolation (handles wrap at 360°) */
+      let diff = ((targetAngle - angle + 540) % 360) - 180;
+      angle += diff * 0.14;
+
+      cursor.style.transform = `translate(${(curX - 19).toFixed(1)}px, ${(curY - 19).toFixed(1)}px)`;
+      cursor.style.setProperty('--urinal-angle', angle.toFixed(2) + 'deg');
+
+      lastX = mouseX;
+      lastY = mouseY;
       requestAnimationFrame(tick);
     }
     tick();
