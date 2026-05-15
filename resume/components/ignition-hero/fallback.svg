@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Specimen — Sebastian Taylor">
+  <rect width="1200" height="720" fill="#0A0908"/>
+  <g fill="#E8E0D4" font-family="Georgia, 'Iowan Old Style', serif">
+    <text x="600" y="350" text-anchor="middle" font-size="76" font-style="italic">Sebastian Taylor</text>
+    <text x="600" y="402" text-anchor="middle" font-size="14" font-family="ui-monospace, JetBrains Mono, monospace" letter-spacing="6" fill="#6B5640">DESIGNER · DEVELOPER</text>
+    <text x="600" y="430" text-anchor="middle" font-size="11" font-family="ui-monospace, JetBrains Mono, monospace" letter-spacing="4" fill="#6B5640">FOR BONFIRE LABS · 05.2026</text>
+  </g>
+</svg>
