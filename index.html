@@ -1265,7 +1265,7 @@
       <div class="s-label-line line-expand"></div>
     </div>
     <div class="reveal-wrap">
-      <p class="contact-h reveal-inner">Evolution is the<br>only constant.</p>
+      <p class="contact-h reveal-inner">Evolution is the only constant.</p>
     </div>
     <div class="contact-rows">
       <a href="mailto:slt4441@gmail.com" class="contact-row fade-up" title="Double-click to edit link">
@@ -2615,53 +2615,51 @@
 
   })();
 
-  // ── Hero: character scramble on cursive-top ──────────────────────────────
+  // ── Character scramble (hero cursive-top + contact-h) ────────────────────
   (function () {
-    const el = document.querySelector('.cursive-top');
-    if (!el) return;
-    const final = el.textContent;
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&';
-    let started = false;
+    const elements = document.querySelectorAll('.cursive-top, .contact-h');
+    if (!elements.length) return;
+    const charPool = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&';
 
-    function scramble() {
-      if (started) return;
-      started = true;
-      const len = final.length;
-      const resolved = new Array(len).fill(false);
-      let frame = 0;
-      const totalFrames = 42;
-      const resolveStart = 8;
+    elements.forEach(el => {
+      const final = el.textContent;
+      let started = false;
 
-      (function tick() {
-        frame++;
-        let out = '';
-        for (let i = 0; i < len; i++) {
-          if (final[i] === ' ') { out += ' '; continue; }
-          if (resolved[i]) { out += final[i]; continue; }
-          // Stagger resolution: characters resolve left-to-right over last 28 frames
-          const resolveFrame = resolveStart + Math.floor((i / len) * (totalFrames - resolveStart));
-          if (frame >= resolveFrame) {
-            resolved[i] = true;
-            out += final[i];
-          } else {
-            out += chars[Math.floor(Math.random() * chars.length)];
+      function scramble() {
+        if (started) return;
+        started = true;
+        const len = final.length;
+        const resolved = new Array(len).fill(false);
+        let frame = 0;
+        const totalFrames = 42;
+        const resolveStart = 8;
+
+        (function tick() {
+          frame++;
+          let out = '';
+          for (let i = 0; i < len; i++) {
+            if (final[i] === ' ') { out += ' '; continue; }
+            if (resolved[i]) { out += final[i]; continue; }
+            const resolveFrame = resolveStart + Math.floor((i / len) * (totalFrames - resolveStart));
+            if (frame >= resolveFrame) {
+              resolved[i] = true;
+              out += final[i];
+            } else {
+              out += charPool[Math.floor(Math.random() * charPool.length)];
+            }
           }
-        }
-        el.textContent = out;
-        if (frame < totalFrames) requestAnimationFrame(tick);
-        else { el.textContent = final; if (window._wrapChars) window._wrapChars(el); }
-      })();
-    }
-
-    // Fire when the .in class lands (existing IntersectionObserver adds it)
-    new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === 'attributes' && el.classList.contains('in')) scramble();
+          el.textContent = out;
+          if (frame < totalFrames) requestAnimationFrame(tick);
+          else { el.textContent = final; if (window._wrapChars) window._wrapChars(el); }
+        })();
       }
-    }).observe(el, { attributes: true, attributeFilter: ['class'] });
 
-    // Fallback: if already visible on first paint
-    if (el.classList.contains('in')) scramble();
+      new MutationObserver(() => {
+        if (el.classList.contains('in')) scramble();
+      }).observe(el, { attributes: true, attributeFilter: ['class'] });
+
+      if (el.classList.contains('in')) scramble();
+    });
   })();
 
   // ── Hero: 3D depth parallax on #info text layers ─────────────────────────
@@ -2732,6 +2730,8 @@
         html += `<span class="c-char">${text[i]}</span>`;
       }
       el.innerHTML = html;
+      refreshChars();
+      if (!loopStarted) startLoop();
     }
     window._wrapChars = wrapChars;
 
@@ -2739,15 +2739,17 @@
     let chars = [];
     let loopStarted = false;
 
+    function refreshChars() {
+      chars = Array.from(document.querySelectorAll('.cursive-top .c-char, .contact-h .c-char'));
+    }
+
     // Typeface mode: 'consistent' = one font per swipe, 'random' = each char different
     window._cursiveFontMode = localStorage.getItem('cursive-font-mode') || 'consistent';
 
     function startLoop() {
       if (loopStarted) return;
       loopStarted = true;
-      const el = document.querySelector('.cursive-top');
-      if (!el) return;
-      chars = Array.from(el.querySelectorAll('.c-char'));
+      refreshChars();
       if (!chars.length) return;
 
       let swipeFont    = null; // one font for the whole swipe in consistent mode
