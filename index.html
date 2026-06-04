@@ -288,23 +288,44 @@
     /* ── Info ── */
     #info {
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      gap: clamp(40px, 5vw, 72px);
+      justify-content: center;
+      gap: 36px;
       min-height: calc(100vh - 60px);
       position: relative;
     }
 
-    .info-wrap { flex: 0 0 auto; max-width: 480px; }
-
     .info-right {
-      flex: 0 0 clamp(380px, 42vw, 600px);
+      width: 100%;
+      max-width: clamp(420px, 48vw, 640px);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0;
       position: relative;
+    }
+
+    .info-scroll-hint {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.7;
+      z-index: 5;
+    }
+    .info-scroll-line {
+      width: 32px;
+      height: 1px;
+      background: var(--muted);
+      display: inline-block;
     }
 
     /* ── Vintage Mac / arcade bezel ── */
@@ -449,129 +470,99 @@
       z-index: 1;
     }
 
-    /* ── SPIN button — centered in hero ── */
+    /* ── SPIN button — physical arcade plunger ── */
     .slot-trigger-wrap {
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: 10;
-      perspective: 600px;
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      /* collar / base ring under the button */
+      background:
+        radial-gradient(circle at 50% 55%, #1a1a1a 0%, #0a0a0a 60%, #050505 100%);
+      box-shadow:
+        inset 0 2px 4px rgba(255,255,255,0.06),
+        inset 0 -3px 6px rgba(0,0,0,0.8),
+        0 4px 14px rgba(0,0,0,0.7),
+        0 0 0 1px #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 800px;
     }
 
     .slot-trigger {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #080808;
-      border: 1.5px solid #00e05a;
-      color: #00e05a;
-      font-family: 'VT323', monospace;
-      font-size: 28px;
-      letter-spacing: 0.26em;
-      padding: 14px 44px 12px;
+      width: 104px;
+      height: 104px;
+      border-radius: 50%;
+      border: none;
       cursor: none;
-      text-transform: uppercase;
-      white-space: nowrap;
-      transform-style: preserve-3d;
-      transform: rotateX(0deg) rotateY(0deg) scale(1) translateY(0px);
-      transition: transform 0.12s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, text-shadow 0.12s ease;
-      text-shadow:
-        0 0 10px rgba(0,224,90,0.9),
-        0 0 24px rgba(0,224,90,0.4);
-      box-shadow:
-        0 0 18px rgba(0,224,90,0.25),
-        0 6px 0 #003d18,
-        0 7px 18px rgba(0,0,0,0.7),
-        inset 0 1px 0 rgba(0,224,90,0.25);
+      padding: 0;
       position: relative;
       user-select: none;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      letter-spacing: 0.22em;
+      color: #f6f7e9;
+      text-transform: uppercase;
+      /* glossy red cap, like a real arcade button */
+      background:
+        radial-gradient(circle at 38% 32%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 22%),
+        radial-gradient(circle at 50% 50%, #e63a2f 0%, #c0271d 55%, #7e1610 100%);
+      text-shadow:
+        0 1px 1px rgba(0,0,0,0.55),
+        0 0 12px rgba(255,90,70,0.25);
+      box-shadow:
+        /* depth of the plunger */
+        0 8px 0 #4a0c08,
+        0 10px 18px rgba(0,0,0,0.7),
+        /* inner highlight + shadow on the cap */
+        inset 0 2px 2px rgba(255,255,255,0.45),
+        inset 0 -8px 14px rgba(0,0,0,0.45),
+        inset 0 0 0 1.5px rgba(0,0,0,0.35);
+      transform: translateY(0);
+      transition:
+        transform 0.09s cubic-bezier(0.34,1.4,0.64,1),
+        box-shadow 0.09s ease,
+        filter 0.15s ease;
     }
     .slot-trigger:hover {
-      background: #00e05a;
-      color: #000;
-      text-shadow: none;
-      border-color: #00e05a;
-      box-shadow:
-        0 0 40px rgba(0,224,90,0.8),
-        0 0 80px rgba(0,224,90,0.25),
-        0 6px 0 #006630,
-        0 8px 28px rgba(0,0,0,0.7),
-        inset 0 1px 0 rgba(255,255,255,0.25);
+      filter: brightness(1.06) saturate(1.05);
     }
     .slot-trigger.pressed,
     .slot-trigger:active {
-      transform: rotateX(8deg) scale(0.94) translateY(5px) !important;
+      transform: translateY(7px);
       box-shadow:
-        0 0 20px rgba(0,224,90,0.5),
-        0 1px 0 #003d18,
-        0 2px 8px rgba(0,0,0,0.6),
-        inset 0 3px 8px rgba(0,0,0,0.7),
-        inset 0 -1px 0 rgba(0,224,90,0.15);
-      background: #00c44f;
-      color: #000;
-      text-shadow: none;
+        0 1px 0 #4a0c08,
+        0 2px 6px rgba(0,0,0,0.55),
+        inset 0 2px 2px rgba(255,255,255,0.3),
+        inset 0 -4px 10px rgba(0,0,0,0.5),
+        inset 0 0 0 1.5px rgba(0,0,0,0.35);
     }
     .slot-trigger:disabled {
-      opacity: 0.45;
+      opacity: 0.55;
       pointer-events: none;
     }
-    .slot-icon {
-      display: inline-block;
-      line-height: 1;
-      transition: transform 0.5s cubic-bezier(0.34,1.4,0.64,1);
-      will-change: transform;
+    .slot-trigger.spinning {
+      animation: trigger-jitter 0.18s steps(1) infinite;
     }
-    .slot-trigger.spinning .slot-icon {
-      animation: slot-spin 0.4s linear infinite;
-    }
-    @keyframes slot-spin {
-      to { transform: rotate(360deg); }
+    @keyframes trigger-jitter {
+      0%   { transform: translateY(5px) rotate(-0.5deg); }
+      50%  { transform: translateY(7px) rotate(0.5deg); }
     }
 
-    /* slot-label reel: clips to one character height, scrolls through chars */
     .slot-label {
       display: inline-block;
-      overflow: hidden;
-      height: 1.1em;
-      vertical-align: middle;
-      position: relative;
-    }
-    .slot-label-inner {
-      display: flex;
-      flex-direction: column;
-      transition: none;
-    }
-    .slot-label-char {
-      display: block;
-      line-height: 1.1em;
-      text-align: center;
-    }
-    .slot-trigger.spinning .slot-label-inner {
-      animation: label-reel 0.18s steps(1) infinite;
-    }
-    @keyframes label-reel {
-      0%   { transform: translateY(0); }
-      25%  { transform: translateY(-1.1em); }
-      50%  { transform: translateY(-2.2em); }
-      75%  { transform: translateY(-3.3em); }
+      line-height: 1;
+      pointer-events: none;
     }
 
     @media (max-width: 900px) {
-      #info { flex-direction: column; align-items: stretch; padding-bottom: 60px; }
-      .info-right { order: -1; max-width: 100%; width: 100%; }
-      .slot-trigger-wrap {
-        order: 0;
-        position: relative;
-        left: auto; top: auto;
-        transform: none;
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        margin-bottom: 16px;
-        perspective: 600px;
-      }
-      .info-wrap { order: 1; }
+      #info { padding-bottom: 60px; }
+      .info-right { max-width: 100%; width: 100%; }
     }
 
     .cursive-top {
@@ -1045,10 +1036,9 @@
 <nav>
   <a href="#info" class="nav-name">Sebastian Taylor</a>
   <ul class="nav-links">
-    <li><a href="#info" nav-link="info" class="active"><span class="menu_link_bg" style="translate: none; rotate: none; scale: none; transform: translate(-74.1719px, 0px);"></span><span class="nav-num">00</span> Info</a></li>
-    <li><a href="#work" nav-link="work"><span class="menu_link_bg" style="translate: none; rotate: none; scale: none; transform: translate(-101%, 0%) translate(-164.409px, 0px);"></span><span class="nav-num">01</span> Work</a></li>
-    <li><a href="#archive" nav-link="archive"><span class="menu_link_bg" style="translate: none; rotate: none; scale: none; transform: translate(-101%, 0%) translate(-195.514px, 0px);"></span><span class="nav-num">02</span> Archive</a></li>
-    <li><a href="#contact" nav-link="contact"><span class="menu_link_bg" style="translate: none; rotate: none; scale: none; transform: translate(-101%, 0%) translate(-203.784px, 0px);"></span><span class="nav-num">03</span> Contact</a></li>
+    <li><a href="#info" nav-link="info" class="active"><span class="menu_link_bg"></span><span class="nav-num">00</span> Info</a></li>
+    <li><a href="#archive" nav-link="archive"><span class="menu_link_bg"></span><span class="nav-num">01</span> Archive</a></li>
+    <li><a href="#contact" nav-link="contact"><span class="menu_link_bg"></span><span class="nav-num">02</span> Contact</a></li>
   </ul>
 </nav>
 
@@ -1056,40 +1046,11 @@
 
   <!-- Info -->
   <section id="info" nav-section="info">
-    <div class="info-wrap">
-      <div class="cursive-top">Picture a better world.</div>
-      <div class="info-tagline fade-up">
-        Designer &amp; Creative Practitioner — Novato, CA
-      </div>
-      <h1 class="info-h1">
-        <div class="reveal-wrap"><div class="reveal-inner">The answer is within.</div></div>
-        <div class="reveal-wrap"><div class="reveal-inner" style="animation-delay:0.1s"><br></div></div>
-      </h1>
-      <p class="info-bio fade-up" style="animation-delay:0.3s">
-        Working across graphic design, editorial, and program development.
-        Focused on design systems, cultural production, and the spaces where
-        visual practice meets community.
-      </p>
-      <div class="info-caps fade-up" style="animation-delay:0.4s">
-        <span class="cap">Graphic Design</span>
-        <span class="cap">Art Direction</span>
-        <span class="cap">Editorial</span>
-        <span class="cap">Print</span>
-        <span class="cap">Identity</span>
-        <span class="cap">Adobe CC</span>
-        <span class="cap">Layout Design</span>
-      </div>
-      <div class="scroll-hint fade-up" style="animation-delay:0.6s">
-        <div class="scroll-line line-expand in"></div>
-        Scroll to explore
-      </div>
-    </div>
-
     <div class="info-right" id="infoRight">
       <div class="slot-bezel">
         <div class="slot-screen-top">
           <span class="slot-led"></span>
-          <span class="slot-counter" id="slotCounter">···  /  2257</span>
+          <span class="slot-counter" id="slotCounter">····</span>
           <span class="slot-brand">FAUX™</span>
         </div>
         <div class="slot-window" id="slotWindow">
@@ -1100,54 +1061,13 @@
 
     <div class="slot-trigger-wrap" id="slotTriggerWrap">
       <button class="slot-trigger" id="slotTrigger" aria-label="Spin">
-        <span class="slot-icon">⊙</span>
-        <span class="slot-label">
-          <span class="slot-label-inner">
-            <span class="slot-label-char">SPIN</span>
-            <span class="slot-label-char">7777</span>
-            <span class="slot-label-char">BAR!</span>
-            <span class="slot-label-char">★★★★</span>
-          </span>
-        </span>
+        <span class="slot-label">SPIN</span>
       </button>
     </div>
-  </section>
 
-  <!-- Work -->
-  <section id="work" nav-section="work">
-    <div class="s-label">
-      <span>Work</span>
-      <div class="s-label-line line-expand"></div>
-    </div>
-    <div class="archive-grid">
-      <a class="archive-cell fade-up" href="scope-photography.html" data-color="#7ab3d4" style="">
-        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/089adafa-2653-475f-8fad-c58774ac61ea_rw_1920.jpeg?h=c6d262e7442abc42c19d428207a5dd54')"></div>
-        <div class="archive-cell-meta">
-          <div class="archive-title">Photography</div>
-          <div class="archive-year">2021–</div>
-        </div>
-      </a>
-      <a class="archive-cell fade-up" href="scope-brand-identity.html" data-color="#c8c2f5" style="">
-        <div class="archive-cell-inner" style="background-image:url('https://raw.githubusercontent.com/sebastianlewistaylor/portfolio/main/assets/NB-FILM-SCHOOL-THUMB-FINAL.png')"></div>
-        <div class="archive-cell-meta">
-          <div class="archive-title">Brand Identity</div>
-          <div class="archive-year">2022–</div>
-        </div>
-      </a>
-      <a class="archive-cell fade-up" href="scope-editorial-print.html" data-color="#c9956e" style="">
-        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/cf485c2c-3f5d-4a62-8553-c67b48ad322c_rw_1920.jpg?h=e5bc5533e662243da649bcece5b0ddc1')"></div>
-        <div class="archive-cell-meta">
-          <div class="archive-title">Editorial &amp; Print</div>
-          <div class="archive-year">2022–</div>
-        </div>
-      </a>
-      <a class="archive-cell fade-up" href="scope-strategy.html" data-color="#8ecfa0" style="">
-        <div class="archive-cell-inner" style="background-image:url('https://cdn.myportfolio.com/8bfe06f3-7238-48ee-935c-b9d18e79a858/7ce5fa5c-db33-4b15-a780-b0022bf54847_rw_1920.jpeg?h=ecd8bbf5256093338ee1f221af2c6a92')"></div>
-        <div class="archive-cell-meta">
-          <div class="archive-title">Strategy &amp; Planning</div>
-          <div class="archive-year">2024–</div>
-        </div>
-      </a>
+    <div class="info-scroll-hint">
+      <span class="info-scroll-line"></span>
+      <span>Scroll</span>
     </div>
   </section>
 
@@ -1349,7 +1269,7 @@
       <div class="s-label-line line-expand"></div>
     </div>
     <div class="reveal-wrap">
-      <p class="contact-h reveal-inner">Let's make something<br>worth making.</p>
+      <p class="contact-h reveal-inner">Evolution is the<br>only constant.</p>
     </div>
     <div class="contact-rows">
       <a href="mailto:slt4441@gmail.com" class="contact-row fade-up" title="Double-click to edit link">
@@ -5191,7 +5111,7 @@
     }
 
     function setCounter(idx) {
-      if (counter) counter.textContent = String(idx + 1).padStart(4, '0') + '  /  2257';
+      if (counter) counter.textContent = String(idx + 1).padStart(4, '0');
     }
 
     let landed    = -1;
@@ -5238,7 +5158,7 @@
       btn.classList.add('spinning');
       img.style.transition = 'none';
       img.style.opacity = '1';
-      if (counter) counter.textContent = '···· / 2257';
+      if (counter) counter.textContent = '····';
 
       const { items, finalItem } = readyBatch;
       readyBatch = null;
