@@ -5116,10 +5116,12 @@
     let spinning  = false;
     let readyBatch = null;   // pre-loaded batch waiting to be used
     let pendingSpin = false; // user clicked spin before batch was ready
+    let activeProbes = [];   // retain Image() refs so browsers can't GC them mid-flight
 
     // Pre-pick and pre-load 101 images (100 spin frames + 1 landing).
-    // Calls onReady() once every image is in the browser cache.
-    // excludeIdx: the currently displayed image — final frame will differ.
+    // Calls onReady() once every image is in the browser cache — or after a
+    // 6s safety timeout, whichever fires first (so a single stalled request
+    // can't leave the slot machine invisible forever).
     function buildBatch(excludeIdx, onReady) {
       readyBatch = null;
       const items = [];
@@ -5132,17 +5134,26 @@
       const finalItem = { src: BASE + IMAGES[finalIdx], idx: finalIdx };
 
       let pending = 101;
-      function done() {
-        if (--pending === 0) {
-          readyBatch = { items, finalItem };
-          onReady();
-        }
+      let fired   = false;
+      function fire() {
+        if (fired) return;
+        fired = true;
+        readyBatch = { items, finalItem };
+        onReady();
       }
+      function done() {
+        if (--pending === 0) fire();
+      }
+      // Replace probe set — drop old refs to allow GC of prior batch's Images
+      activeProbes = [];
       [...items, finalItem].forEach(item => {
         const el = new Image();
         el.onload = el.onerror = done;
         el.src = item.src;
+        activeProbes.push(el);
       });
+      // Safety: don't sit invisible forever if one request hangs
+      setTimeout(fire, 6000);
     }
 
     // 100 pre-loaded frames at 18ms = 1.8s + 0.7s crossfade ≈ 2.5s total
@@ -5212,21 +5223,29 @@
     btn.addEventListener('mousedown', () => { btn.classList.add('pressed'); });
     btn.addEventListener('mouseup',   () => { btn.classList.remove('pressed'); });
 
-    // Start invisible. Build the first batch — show its final image as a
-    // preview while loading, then auto-spin once every frame is cached.
+    // Show a preview image immediately — don't wait for the full batch to
+    // preload. Then build the spin batch in the background and auto-spin
+    // once ready (or once the safety timeout fires).
     img.style.opacity = '0';
     img.style.transition = 'none';
 
-    buildBatch(-1, () => {
-      // Use the batch's own final image as the entry preview
-      const preview = readyBatch.finalItem;
-      img.src = preview.src;
-      setCounter(preview.idx);
-      landed = preview.idx;
+    const previewIdx = nextIdx();
+    const previewSrc = BASE + IMAGES[previewIdx];
+    const previewProbe = new Image();
+    previewProbe.onload = previewProbe.onerror = () => {
+      img.src = previewSrc;
+      setCounter(previewIdx);
+      landed = previewIdx;
       requestAnimationFrame(() => requestAnimationFrame(() => {
         img.style.transition = 'opacity 0.6s ease-out';
         img.style.opacity = '1';
       }));
+    };
+    previewProbe.src = previewSrc;
+    // Retain probe ref so it can't be GC'd before onload fires
+    activeProbes.push(previewProbe);
+
+    buildBatch(previewIdx, () => {
       setTimeout(spin, 900); // auto-spin after preview fades in
     });
   })();
