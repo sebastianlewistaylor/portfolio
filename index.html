@@ -5116,7 +5116,18 @@
     let spinning  = false;
     let readyBatch = null;   // pre-loaded batch waiting to be used
     let pendingSpin = false; // user clicked spin before batch was ready
-    let activeProbes = [];   // retain Image() refs so browsers can't GC them mid-flight
+
+    // Abort any in-flight Image probes left over from a previous IIFE
+    // execution (SPA re-nav into index). Without this, every nav stacks
+    // another 101 GitHub raw requests behind the browser's 6-per-host cap
+    // and the new batch starves, leaving the slot blank.
+    if (window._slotActiveProbes) {
+      window._slotActiveProbes.forEach(el => {
+        el.onload = el.onerror = null;
+        el.src = ''; // cancels in-flight network request
+      });
+    }
+    window._slotActiveProbes = [];
 
     // Pre-pick and pre-load 101 images (100 spin frames + 1 landing).
     // Calls onReady() once every image is in the browser cache — or after a
@@ -5144,13 +5155,11 @@
       function done() {
         if (--pending === 0) fire();
       }
-      // Replace probe set — drop old refs to allow GC of prior batch's Images
-      activeProbes = [];
       [...items, finalItem].forEach(item => {
         const el = new Image();
         el.onload = el.onerror = done;
         el.src = item.src;
-        activeProbes.push(el);
+        window._slotActiveProbes.push(el);
       });
       // Safety: don't sit invisible forever if one request hangs
       setTimeout(fire, 6000);
@@ -5231,8 +5240,10 @@
 
     const previewIdx = nextIdx();
     const previewSrc = BASE + IMAGES[previewIdx];
-    const previewProbe = new Image();
-    previewProbe.onload = previewProbe.onerror = () => {
+    let previewShown = false;
+    function showPreview() {
+      if (previewShown) return;
+      previewShown = true;
       img.src = previewSrc;
       setCounter(previewIdx);
       landed = previewIdx;
@@ -5240,10 +5251,13 @@
         img.style.transition = 'opacity 0.6s ease-out';
         img.style.opacity = '1';
       }));
-    };
+    }
+    const previewProbe = new Image();
+    previewProbe.onload = previewProbe.onerror = showPreview;
     previewProbe.src = previewSrc;
-    // Retain probe ref so it can't be GC'd before onload fires
-    activeProbes.push(previewProbe);
+    window._slotActiveProbes.push(previewProbe);
+    // Safety: show the preview even if the probe's load is starved
+    setTimeout(showPreview, 2500);
 
     buildBatch(previewIdx, () => {
       setTimeout(spin, 900); // auto-spin after preview fades in
