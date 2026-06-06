@@ -1089,8 +1089,8 @@
   }
 
   /* ─── Calligraphic pebble dive — 6 fat-stroke glyphs cross paths in 3D,
-        each flying its own direction. mix-blend-mode multiplies overlaps
-        into mid-tones for creative negative-space colors. Aperture is a
+        each flying its own direction. Soft-blurred colour fields layer with
+        normal alpha blending for organic overlaps. Aperture is a
         smooth cubic-Bézier clipPath (SMIL animated, zero corners). ─── */
   #topo-intro{
     position:fixed; inset:0;
@@ -1142,8 +1142,16 @@
     width: 70vmin; height: 88vmin;
     margin-left: -35vmin; margin-top: -44vmin;
     transform-style: preserve-3d;
-    mix-blend-mode: multiply;
+    /* normal (not multiply): on these filtered + 3D-transformed layers, multiply
+       made Chrome composite the rectangular layer bounds as a hard straight edge.
+       normal blend keeps the colour soft; overlaps still build depth via alpha. */
+    mix-blend-mode: normal;
     will-change: transform;
+    /* Feather the rectangular layer bounds to transparent so the colour recedes
+       as a soft gradient — kills the hard raster/filter-box edge that otherwise
+       shows through mix-blend-mode + 3D as a tacky straight line. */
+    -webkit-mask: radial-gradient(closest-side, #000 30%, rgba(0,0,0,0) 92%);
+            mask: radial-gradient(closest-side, #000 30%, rgba(0,0,0,0) 92%);
   }
   #topo-intro .topo-layer svg{
     width:100%; height:100%; display:block;
@@ -1252,12 +1260,14 @@
       var n = ri(5, 8);
       var circles = [];
       for (var i = 0; i < n; i++){
-        var x  = r(95, 305);
-        var y  = r(110, 390);
-        var R  = r(40, 88);
-        var dx = r(22, 55);
-        var dy = r(22, 55);
-        var dR = r(16, 34);
+        // Spawn kept central with margin to the viewBox edges so the feathered
+        // silhouette fades to zero before any filter/layer boundary.
+        var x  = r(150, 250);
+        var y  = r(185, 315);
+        var R  = r(30, 56);
+        var dx = r(14, 34);
+        var dy = r(14, 34);
+        var dR = r(12, 24);
         var ax = r(-0.6, 0.6);
         var ay = r(-0.6, 0.6);
         var aR = r(-0.4, 0.4);
@@ -1356,13 +1366,17 @@
     <!-- Gooey metaball filter — gaussian blur + alpha threshold merges nearby circles
          into a single fluid silhouette. The classic "water-in-oil" physics result:
          high surface tension where circles overlap → smooth rounded boundaries everywhere. -->
-    <filter id="gooey" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+    <filter id="gooey" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
       <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur"/>
       <feColorMatrix in="blur" mode="matrix" values="
         1 0 0 0 0
         0 1 0 0 0
         0 0 1 0 0
-        0 0 0 22 -10"/>
+        0 0 0 18 -8" result="goo"/>
+      <!-- Feather the welded silhouette so the colour recedes as a soft gradient,
+           not a hard threshold line. Region is oversized so this blur fades to
+           zero well before the filter box, leaving no straight edge. -->
+      <feGaussianBlur in="goo" stdDeviation="20"/>
     </filter>
 
     <!-- Topographic dive aperture — closes from full-screen rounded blob → biomorphic mid → point.
