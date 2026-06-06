@@ -1095,9 +1095,7 @@
   #topo-intro{
     position:fixed; inset:0;
     z-index:9999;
-    background:
-      radial-gradient(ellipse at 50% 50%, var(--dive-glow) 0%, transparent 60%),
-      var(--dive-bg, #efe9dd);
+    background: var(--dive-bg, #efe9dd);
     overflow:hidden;
     pointer-events:none;
     perspective: 1100px;
@@ -1105,6 +1103,34 @@
     isolation: isolate;
     -webkit-clip-path: url(#topo-clip);
     clip-path: url(#topo-clip);
+  }
+  /* Soft glow — colour blobs at randomized positions (set per-load by JS).
+     No fixed gradient shape or centre: the falloff comes purely from a heavy
+     blur, so the colour dissolves organically instead of as a banded ellipse. */
+  #topo-intro::before,
+  #topo-intro::after{
+    content:"";
+    position:absolute;
+    border-radius:50%;
+    background: var(--dive-glow);
+    filter: blur(120px);
+    pointer-events:none;
+    z-index:0;
+  }
+  #topo-intro::before{
+    left: var(--glow-x, 46%);
+    top:  var(--glow-y, 44%);
+    width: var(--glow-size, 78vmin);
+    height: var(--glow-size, 78vmin);
+    transform: translate(-50%,-50%);
+  }
+  #topo-intro::after{
+    left: var(--glow-x2, 58%);
+    top:  var(--glow-y2, 60%);
+    width: var(--glow-size2, 52vmin);
+    height: var(--glow-size2, 52vmin);
+    transform: translate(-50%,-50%);
+    opacity:.85;
   }
   #topo-intro .topo-scene{
     position:absolute; inset:0;
@@ -1183,6 +1209,13 @@
     }
     r.style.setProperty('--dive-bg',   'hsl(' + (32 + Math.random() * 22).toFixed(1) + ', 22%, 92%)');
     r.style.setProperty('--dive-glow', 'hsla(' + base.toFixed(1) + ', 45%, 42%, 0.18)');
+    // Randomized glow placement — the blur does the fading, so position drifts each load.
+    r.style.setProperty('--glow-x',     (38 + Math.random() * 26).toFixed(1) + '%');
+    r.style.setProperty('--glow-y',     (34 + Math.random() * 30).toFixed(1) + '%');
+    r.style.setProperty('--glow-x2',    (40 + Math.random() * 30).toFixed(1) + '%');
+    r.style.setProperty('--glow-y2',    (42 + Math.random() * 34).toFixed(1) + '%');
+    r.style.setProperty('--glow-size',  (64 + Math.random() * 30).toFixed(0) + 'vmin');
+    r.style.setProperty('--glow-size2', (44 + Math.random() * 24).toFixed(0) + 'vmin');
   })();
 </script>
 
