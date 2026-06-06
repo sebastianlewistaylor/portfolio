@@ -1,0 +1,98 @@
+/* Entry Gate — vestibule that wraps the landing page.
+   Scoped to #entry-gate. No global rules. */
+
+#entry-gate{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:var(--brand-bg, #0A0908);
+  color:var(--brand-text, #E8DFC9);
+  overflow:hidden;
+  isolation:isolate;
+  contain:layout paint;
+  cursor:default;
+}
+
+#entry-gate[hidden]{ display:none; }
+
+/* Site below the gate — hidden until the gate dissolves. */
+#site{
+  opacity:0;
+  transition:opacity 600ms ease-out;
+}
+#site.revealed{ opacity:1; }
+
+/* Pre-ignition copy — only text shown before signal */
+#entry-gate .eg-copy{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; justify-content:space-between;
+  align-items:center;
+  padding:48px 24px;
+  pointer-events:none;
+  z-index:2;
+  transition:opacity 200ms ease-out;
+}
+#entry-gate .eg-copy[data-fading="1"]{ opacity:0; }
+
+#entry-gate .eg-top{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+#entry-gate .eg-mark{
+  font-family:var(--brand-font-display, Georgia, serif);
+  font-size:18px;
+  letter-spacing:0.4em;
+  color:var(--brand-text, #E8DFC9);
+  text-transform:lowercase;
+  margin:0;
+}
+#entry-gate .eg-sub{
+  font-family:var(--brand-font-mono, ui-monospace, monospace);
+  font-size:10px;
+  letter-spacing:0.3em;
+  text-transform:lowercase;
+  color:var(--brand-muted, #6B5640);
+  margin:0;
+}
+#entry-gate .eg-hint{
+  font-family:var(--brand-font-mono, ui-monospace, monospace);
+  font-size:10px;
+  letter-spacing:0.3em;
+  text-transform:lowercase;
+  color:var(--brand-muted-alt, #3D3328);
+  opacity:0.6;
+  margin:0;
+  animation:eg-breath 2.4s ease-in-out infinite;
+}
+@keyframes eg-breath{
+  0%, 100% { opacity:0.4; }
+  50%      { opacity:0.8; }
+}
+
+/* Stage where the Ignition Hero will mount on signal */
+#entry-gate .eg-stage{
+  position:absolute; inset:0;
+  z-index:1;
+}
+#entry-gate .eg-stage .ignition-hero{
+  height:100%;
+}
+
+/* Gate dissolve — applied on completion */
+#entry-gate.eg-dissolving{
+  transition:opacity 800ms ease-out;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* Reduced motion — quick still frame, no burn */
+@media (prefers-reduced-motion: reduce){
+  #entry-gate .eg-hint{ animation:none; opacity:0.6; }
+}
+
+/* Forced colors — system fallback */
+@media (forced-colors: active){
+  #entry-gate{ background:Canvas; color:CanvasText; }
+  #entry-gate .eg-mark, #entry-gate .eg-sub, #entry-gate .eg-hint{ color:CanvasText; }
+}
+
+/* No-JS — hide gate, show site (handled in index.html via <noscript>) */
