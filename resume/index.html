@@ -695,15 +695,7 @@
     transition: border-color .3s, color .3s;
   }
   .reel-card:hover .tag{border-color:var(--rust);color:var(--ink)}
-  .reel-card .arrow{
-    position:absolute;top:18px;right:20px;
-    font-family:'freight-macro-pro','Iowan Old Style','Georgia',serif;font-weight:300;
-    font-size:18px;color:var(--ink-soft);
-    transition:transform .35s cubic-bezier(.22,1,.36,1), color .3s;
-    z-index:2;
-    line-height:1;
-  }
-  .reel-card:hover .arrow{transform:translate(2px,-2px);color:var(--rust)}
+  .reel-card .arrow{display:none}
 
   /* ─── Experience — specimen catalogue listing ─── */
   .exp{
