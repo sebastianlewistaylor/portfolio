@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sebastian Taylor — for Crusoe Brand Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;700;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E0D0A;
+    --ink-2:#161412;
+    --graphite:#221F1A;
+    --paper:#F2EBDF;
+    --cream:#E8E2D5;
+    --cream-soft:#C9C1B0;
+    --brass:#9B8B6E;
+    --ember:#E25822;
+    --ember-soft:#F0B27A;
+    --rule: rgba(232,226,213,0.14);
+    --rule-strong: rgba(232,226,213,0.28);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--ink);color:var(--cream)}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Geist','Helvetica Neue',sans-serif;
+    font-weight:400;
+    font-size:15px;
+    line-height:1.55;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    font-feature-settings:"ss01","ss02","kern","liga","calt";
+  }
+  ::selection{background:var(--ember);color:var(--ink)}
+
+  /* ─── Grain overlay ─── */
+  .grain{
+    position:fixed;inset:0;pointer-events:none;z-index:1000;
+    opacity:.18;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.7  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.85'/></svg>");
+  }
+
+  /* ─── Custom cursor ─── */
+  .cursor{position:fixed;top:0;left:0;width:8px;height:8px;border-radius:50%;background:var(--ember);
+    pointer-events:none;z-index:1100;transform:translate(-50%,-50%);
+    transition:width .22s cubic-bezier(.22,1,.36,1),height .22s cubic-bezier(.22,1,.36,1),background .22s;
+    mix-blend-mode:difference;display:none}
+  .cursor.show{display:block}
+  .cursor.hover{width:34px;height:34px;background:var(--ember-soft)}
+
+  /* ─── Slate (top bar) ─── */
+  .slate{
+    position:fixed;top:0;left:0;right:0;z-index:60;
+    display:grid;grid-template-columns: auto 1fr auto auto;gap:18px;
+    padding:14px 26px;
+    font-family:'Geist Mono',ui-monospace,monospace;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--cream-soft);
+    background:linear-gradient(to bottom, rgba(14,13,10,.94), rgba(14,13,10,.6) 80%, transparent);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .slate-line{display:flex;gap:8px;align-items:center;min-width:0}
+  .slate-label{color:var(--brass);flex-shrink:0}
+  .slate-val{color:var(--cream);white-space:nowrap}
+  .slate-line:nth-child(2) .slate-val{overflow:hidden;text-overflow:ellipsis}
+  .slate-line.ember .slate-val{color:var(--ember)}
+  .ember-dot{width:6px;height:6px;border-radius:50%;background:var(--ember);
+    box-shadow:0 0 12px var(--ember);
+    animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.5;transform:scale(.8)}
+  }
+
+  /* ─── Page wrapper ─── */
+  .wrap{padding:0 28px;max-width:1480px;margin:0 auto}
+
+  /* ─── Hero ─── */
+  .hero{
+    min-height:100vh;
+    padding:170px 0 80px;
+    display:grid;
+    grid-template-rows: 1fr auto;
+    position:relative;
+  }
+
+  .hero-kicker{
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:32px;
+    display:flex;align-items:center;gap:14px;
+    opacity:0;animation:fadeUp .9s .1s forwards cubic-bezier(.22,1,.36,1);
+  }
+  .hero-kicker .bar{display:inline-block;width:34px;height:1px;background:var(--ember)}
+
+  .lockup{
+    position:relative;
+    line-height:.86;
+    margin-left:-0.06em;
+  }
+  .lockup .first{
+    display:block;
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-weight:400;
+    font-size:clamp(4.5rem, 13.5vw, 13.5rem);
+    letter-spacing:-.025em;
+    color:var(--cream);
+    transform:translateY(.04em);
+    opacity:0;animation:fadeUp 1s .25s forwards cubic-bezier(.22,1,.36,1);
+  }
+  .lockup .last{
+    display:block;
+    font-family:'Geist',sans-serif;
+    font-weight:900;
+    font-size:clamp(5.6rem, 17vw, 17rem);
+    letter-spacing:-.045em;
+    text-transform:uppercase;
+    color:var(--cream);
+    margin-top:-0.18em;
+    opacity:0;animation:fadeUp 1s .45s forwards cubic-bezier(.22,1,.36,1);
+  }
+  .lockup .last em{
+    font-style:normal;
+    color:var(--ember);
+    font-family:'Instrument Serif',serif;
+    font-weight:400;
+    font-size:.84em;
+    font-style:italic;
+    letter-spacing:-.02em;
+    margin-left:.08em;
+    vertical-align:.04em;
+  }
+
+  .hero-foot{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap:32px;
+    align-items:end;
+    border-top:1px solid var(--rule-strong);
+    padding-top:22px;
+    margin-top:60px;
+    opacity:0;animation:fadeUp 1s .7s forwards cubic-bezier(.22,1,.36,1);
+  }
+  .hero-tag{
+    font-family:'Instrument Serif',serif;
+    font-size:clamp(20px, 1.9vw, 26px);
+    line-height:1.32;
+    color:var(--cream);
+    max-width:50ch;
+    letter-spacing:-.005em;
+  }
+  .hero-tag em{color:var(--ember);font-style:italic}
+  .hero-meta{
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--cream-soft);
+    line-height:1.85;
+  }
+  .hero-meta a{color:var(--cream-soft);text-decoration:none;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+  .hero-meta a:hover{color:var(--ember);border-color:var(--ember)}
+  .hero-meta .label{color:var(--brass);display:block;font-size:9.5px;letter-spacing:.2em;margin-bottom:2px}
+
+  /* ─── Marquee ─── */
+  .marquee{
+    overflow:hidden;
+    border-top:1px solid var(--rule);
+    border-bottom:1px solid var(--rule);
+    background:var(--ink-2);
+    margin:0 -28px;
+  }
+  .marquee-track{
+    display:flex;gap:48px;
+    white-space:nowrap;
+    animation: scroll 48s linear infinite;
+    padding:18px 0;
+    width:max-content;
+  }
+  .marquee-item{
+    font-family:'Geist Mono',monospace;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--cream-soft);
+  }
+  .marquee-item.dot::before{
+    content:"●";color:var(--ember);margin-right:48px;font-size:8px;vertical-align:middle
+  }
+  @keyframes scroll{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+
+  /* ─── Section heading ─── */
+  .sect{padding:96px 0 40px;border-top:1px solid var(--rule);margin-top:-1px}
+  .sect:first-of-type{border-top:none}
+  .sect-h{
+    display:flex;align-items:center;gap:18px;
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--cream);
+    margin-bottom:48px;
+  }
+  .sect-h .num{color:var(--ember)}
+  .sect-h .rule{flex:1;height:1px;background:var(--rule-strong)}
+  .sect-sub{
+    font-family:'Instrument Serif',serif;font-style:italic;
+    font-size:14px;color:var(--brass);letter-spacing:0;text-transform:none;
+  }
+
+  /* ─── Reel ─── */
+  .reel{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:1px;
+    background:var(--rule-strong);
+    border:1px solid var(--rule-strong);
+  }
+  .reel-card{
+    background:var(--ink);
+    padding:28px 26px 30px;
+    grid-column:span 2;
+    display:flex;flex-direction:column;
+    gap:18px;
+    min-height:280px;
+    position:relative;
+    transition:background .35s ease;
+    text-decoration:none;
+    color:inherit;
+  }
+  a.reel-card{cursor:pointer}
+  a.reel-card::after{
+    content:"↗";
+    position:absolute;top:22px;right:24px;
+    font-family:'Geist',sans-serif;font-weight:300;
+    font-size:18px;color:var(--brass);
+    transition:color .25s, transform .35s cubic-bezier(.22,1,.36,1);
+  }
+  a.reel-card:hover::after{color:var(--ember);transform:translate(2px,-2px)}
+  .reel-card:hover{background:var(--ink-2)}
+  .reel-card.feature{grid-column:span 3}
+  .reel-card.wide{grid-column:span 4}
+  .reel-card.full{grid-column:span 6}
+
+  .reel-meta{
+    display:flex;justify-content:space-between;
+    font-family:'Geist Mono',monospace;
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--brass);
+  }
+  .reel-meta .num{color:var(--ember)}
+
+  .reel-title{
+    font-family:'Instrument Serif',serif;
+    font-size:clamp(28px,3.2vw,42px);
+    line-height:1.02;
+    letter-spacing:-.015em;
+    color:var(--cream);
+    margin-top:auto;
+  }
+  .reel-title em{font-style:italic;color:var(--ember-soft)}
+
+  .reel-desc{
+    font-size:13.5px;line-height:1.55;color:var(--cream-soft);
+    max-width:42ch;
+  }
+
+  .reel-tags{
+    display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;
+  }
+  .tag{
+    font-family:'Geist Mono',monospace;
+    font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;
+    padding:5px 10px;
+    border:1px solid var(--rule-strong);
+    color:var(--cream-soft);
+    border-radius:999px;
+    transition:border-color .25s,color .25s;
+  }
+  .reel-card:hover .tag{border-color:var(--brass);color:var(--cream)}
+
+  .reel-bar{
+    position:absolute;left:0;bottom:0;height:2px;width:0;
+    background:var(--ember);
+    transition:width .55s cubic-bezier(.22,1,.36,1);
+  }
+  .reel-card:hover .reel-bar{width:100%}
+
+  /* ─── Experience ─── */
+  .exp{display:flex;flex-direction:column}
+  .row{
+    display:grid;
+    grid-template-columns: 60px 2.2fr 2fr 1.1fr;
+    gap:28px;
+    padding:26px 0;
+    border-top:1px solid var(--rule);
+    align-items:start;
+    transition:background .3s;
+    position:relative;
+  }
+  .row:last-child{border-bottom:1px solid var(--rule)}
+  .row::before{
+    content:"";position:absolute;left:0;right:0;top:-1px;height:1px;
+    background:var(--ember);transform:scaleX(0);transform-origin:left;
+    transition:transform .55s cubic-bezier(.22,1,.36,1);
+  }
+  .row:hover::before{transform:scaleX(1)}
+
+  .row-num{
+    font-family:'Geist Mono',monospace;
+    font-size:10.5px;letter-spacing:.18em;
+    color:var(--brass);
+    padding-top:6px;
+  }
+  .row-role{
+    font-family:'Instrument Serif',serif;
+    font-size:24px;line-height:1.18;
+    letter-spacing:-.005em;
+    color:var(--cream);
+  }
+  .row-role .org{
+    display:block;
+    font-family:'Geist',sans-serif;
+    font-size:12px;letter-spacing:.06em;font-weight:500;
+    color:var(--brass);text-transform:uppercase;
+    margin-top:6px;
+  }
+  .row-bullets{
+    list-style:none;
+    color:var(--cream-soft);
+    font-size:13.5px;line-height:1.6;
+  }
+  .row-bullets li{
+    padding-left:14px;position:relative;margin-bottom:7px;
+  }
+  .row-bullets li::before{
+    content:"";position:absolute;left:0;top:9px;width:6px;height:1px;background:var(--brass);
+  }
+  .row-date{
+    text-align:right;
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--cream);
+    padding-top:6px;
+  }
+  .row-date .loc{display:block;color:var(--brass);margin-top:4px;font-size:10px;letter-spacing:.16em}
+
+  /* ─── Capabilities ─── */
+  .caps{
+    font-family:'Instrument Serif',serif;
+    font-size:clamp(28px,4.2vw,58px);
+    line-height:1.12;
+    letter-spacing:-.018em;
+    color:var(--cream);
+    max-width:18ch;
+  }
+  .caps em{color:var(--ember);font-style:italic}
+  .caps .light{color:var(--cream-soft)}
+
+  .caps-grid{
+    display:grid;grid-template-columns: 1.4fr 1fr;gap:80px;
+    align-items:start;
+  }
+  .caps-side{
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--cream-soft);
+    line-height:2;
+    border-left:1px solid var(--rule-strong);
+    padding-left:24px;
+  }
+  .caps-side .head{
+    color:var(--ember);
+    margin-bottom:18px;display:block;
+    font-size:10.5px;
+  }
+
+  /* ─── Tools ─── */
+  .tools-row{
+    display:grid;grid-template-columns:160px 1fr;gap:32px;
+    padding:36px 0;
+    border-top:1px solid var(--rule-strong);
+    border-bottom:1px solid var(--rule-strong);
+    align-items:center;
+  }
+  .tools-row .label{
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--brass);
+  }
+  .tools-list{
+    font-family:'Geist',sans-serif;
+    font-size:clamp(18px,1.6vw,22px);
+    font-weight:300;
+    color:var(--cream);
+    letter-spacing:-.01em;
+  }
+  .tools-list span{color:var(--brass);margin:0 14px;font-weight:400}
+
+  /* ─── Education ─── */
+  .edu{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;
+    padding:30px 0;border-top:1px solid var(--rule-strong);
+  }
+  .edu-line{
+    font-family:'Instrument Serif',serif;
+    font-size:22px;color:var(--cream);
+  }
+  .edu-line em{color:var(--ember);font-style:italic}
+  .edu-school{font-family:'Geist',sans-serif;font-size:13px;color:var(--cream-soft);font-weight:400}
+  .edu-meta{
+    font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--brass);text-align:right;align-self:end;
+  }
+
+  /* ─── End slate ─── */
+  .end{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;
+    padding:48px 0 60px;
+    margin-top:64px;
+    border-top:1px solid var(--rule);
+    font-family:'Geist Mono',monospace;
+    font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--brass);
+  }
+  .end .center{text-align:center;color:var(--cream)}
+  .end .right{text-align:right}
+  .end a{color:var(--cream-soft);text-decoration:none}
+  .end a:hover{color:var(--ember)}
+
+  /* ─── Reveal ─── */
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(28px)}
+    to{opacity:1;transform:none}
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 980px){
+    .slate{grid-template-columns:1fr 1fr;gap:8px;padding:10px 18px;font-size:9.5px}
+    .slate-line:nth-child(3),.slate-line:nth-child(4){display:none}
+    .wrap{padding:0 18px}
+    .hero{padding:96px 0 60px;min-height:auto}
+    .hero-foot{grid-template-columns:1fr;gap:22px}
+    .reel{grid-template-columns:1fr 1fr;border:none;background:transparent;gap:14px}
+    .reel-card,.reel-card.feature,.reel-card.wide,.reel-card.full{grid-column:span 2;border:1px solid var(--rule-strong);min-height:240px}
+    .row{grid-template-columns:42px 1fr;gap:14px;padding:22px 0}
+    .row-date{grid-column:2;text-align:left;padding-top:0}
+    .row-bullets{grid-column:2}
+    .row-role{grid-column:2}
+    .caps-grid{grid-template-columns:1fr;gap:32px}
+    .caps-side{border-left:none;border-top:1px solid var(--rule-strong);padding-left:0;padding-top:24px}
+    .tools-row{grid-template-columns:1fr;gap:14px}
+    .edu{grid-template-columns:1fr;gap:8px}
+    .edu-meta{text-align:left}
+    .end{grid-template-columns:1fr;gap:8px}
+    .end .right,.end .center{text-align:left}
+  }
+
+  @media (max-width: 560px){
+    .lockup .first{font-size:18vw}
+    .lockup .last{font-size:24vw}
+  }
+
+  /* ─── Soundtrack ─── */
+  .music{
+    position:fixed;bottom:22px;right:22px;z-index:90;
+    display:flex;align-items:center;gap:10px;
+    padding:7px 16px 7px 7px;
+    background:rgba(14,13,10,.78);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--rule-strong);
+    border-radius:999px;
+    font-family:'Geist Mono',monospace;
+    font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--cream-soft);
+    transition:border-color .35s ease, color .35s ease, transform .4s cubic-bezier(.22,1,.36,1), opacity .5s ease;
+    cursor:pointer;
+    user-select:none;
+    opacity:0;transform:translateY(12px);
+  }
+  .music.ready{opacity:1;transform:none}
+  .music:hover{border-color:var(--ember);color:var(--cream)}
+
+  .music-btn{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--cream);color:var(--ink);
+    border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+    transition:background .25s,color .25s;
+  }
+  .music:hover .music-btn,
+  .music.playing .music-btn{background:var(--ember);color:var(--ink)}
+  .music-btn svg{display:block}
+  .music .pause-icon{display:none}
+  .music.playing .play-icon{display:none}
+  .music.playing .pause-icon{display:block}
+
+  .music-label{display:flex;align-items:center;gap:8px}
+  .music-state{transition:opacity .25s}
+  .music.playing .music-state{display:none}
+
+  .music-bars{
+    display:none;align-items:flex-end;gap:2px;height:11px;
+  }
+  .music.playing .music-bars{display:flex}
+  .music-bars span{
+    display:block;width:2px;background:var(--ember);
+    animation:bars 1s ease-in-out infinite;
+    transform-origin:bottom;
+  }
+  .music-bars span:nth-child(1){animation-delay:0s;height:6px}
+  .music-bars span:nth-child(2){animation-delay:.18s;height:11px}
+  .music-bars span:nth-child(3){animation-delay:.42s;height:5px}
+  .music-bars span:nth-child(4){animation-delay:.08s;height:9px}
+  @keyframes bars{
+    0%,100%{transform:scaleY(.35)}
+    50%{transform:scaleY(1)}
+  }
+
+  .music-now{display:none;color:var(--cream)}
+  .music.playing .music-now{display:inline}
+
+  #ytplayer{
+    position:fixed;
+    width:1px;height:1px;
+    bottom:-10px;right:-10px;
+    opacity:0;pointer-events:none;
+    z-index:-1;
+  }
+
+  @media (max-width: 560px){
+    .music{bottom:14px;right:14px;padding:6px 12px 6px 6px;font-size:9px}
+    .music-btn{width:22px;height:22px}
+  }
+
+  /* Print */
+  @media print{
+    body{background:#fff;color:#111}
+    .grain,.cursor,.marquee,.slate,.music,#ytplayer{display:none}
+    .hero{min-height:auto;padding:0 0 24px}
+    .lockup .first,.lockup .last{color:#111}
+    .lockup .last em{color:#000}
+    .hero-tag,.row-role,.reel-title,.caps,.edu-line{color:#111}
+    .row-bullets,.hero-meta,.reel-desc,.tools-list{color:#222}
+    .sect{padding:24px 0 12px;border-color:#ddd}
+    .row{border-color:#ddd;padding:14px 0}
+    .reel{border-color:#ddd;background:#ddd}
+    .reel-card{background:#fff;break-inside:avoid;min-height:auto}
+    .reveal{opacity:1!important;transform:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="cursor" id="cursor"></div>
+
+<!-- ─── Soundtrack ─── -->
+<div class="music" id="music" role="button" tabindex="0" aria-label="Toggle soundtrack">
+  <button class="music-btn" id="musicBtn" aria-label="Play / pause soundtrack" type="button">
+    <svg class="play-icon" width="9" height="11" viewBox="0 0 9 11" fill="currentColor" aria-hidden="true"><path d="M0 0L9 5.5L0 11Z"/></svg>
+    <svg class="pause-icon" width="8" height="10" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true"><rect width="2.5" height="10"/><rect x="5.5" width="2.5" height="10"/></svg>
+  </button>
+  <span class="music-label">
+    <span class="music-state">Soundtrack</span>
+    <span class="music-now">Now Playing</span>
+    <span class="music-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+  </span>
+</div>
+<div id="ytplayer"></div>
+
+<!-- ─── Slate ─── -->
+<header class="slate">
+  <div class="slate-line"><span class="slate-label">Prod.</span><span class="slate-val">Sebastian L. Taylor</span></div>
+  <div class="slate-line ember"><span class="ember-dot"></span><span class="slate-label">For</span><span class="slate-val">Crusoe — Brand Studio</span></div>
+  <div class="slate-line"><span class="slate-label">Role</span><span class="slate-val">Jr. Creative Producer</span></div>
+  <div class="slate-line"><span class="slate-label">Take</span><span class="slate-val">06 / 2026</span></div>
+</header>
+
+<!-- ─── Hero ─── -->
+<div class="wrap">
+  <section class="hero">
+    <div>
+      <div class="hero-kicker">
+        <span class="bar"></span>
+        <span>For Your Consideration · Crusoe Brand Studio · Junior Creative Producer</span>
+      </div>
+      <h1 class="lockup">
+        <span class="first">Sebastian</span>
+        <span class="last">Taylor</span>
+      </h1>
+    </div>
+
+    <div class="hero-foot">
+      <p class="hero-tag">
+        I've become addicted to <em>making shit happen</em> — the connective tissue between creative vision and the designers, animators, and producers who bring it to life. I own timelines brief-to-delivery, keep people unblocked, and ship <em>on time and on brand.</em>
+      </p>
+      <div class="hero-meta">
+        <span class="label">Contact</span>
+        <a href="mailto:slt4441@gmail.com">slt4441@gmail.com</a><br>
+        <a href="tel:+14154836436">+1 415 483 6436</a><br>
+        San Francisco Bay Area, CA
+      </div>
+      <div class="hero-meta">
+        <span class="label">Channels</span>
+        <a href="https://sebastianlewistaylor.github.io/portfolio" target="_blank" rel="noopener">portfolio ↗</a><br>
+        <a href="https://linkedin.com/in/sebastian-taylorrr" target="_blank" rel="noopener">linkedin ↗</a><br>
+        <a href="https://instagram.com/faux.tm" target="_blank" rel="noopener">@faux.tm ↗</a><br>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/machine.html" target="_blank" rel="noopener">FAUX™ generator ↗</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ─── Marquee ─── -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span class="marquee-item dot">Creative Production</span>
+    <span class="marquee-item dot">Project Timelines</span>
+    <span class="marquee-item dot">Vendor &amp; Stakeholder Coordination</span>
+    <span class="marquee-item dot">Brand Strategy</span>
+    <span class="marquee-item dot">Web Design</span>
+    <span class="marquee-item dot">Short-Form Media</span>
+    <span class="marquee-item dot">Motion &amp; Video</span>
+    <span class="marquee-item dot">Art Direction</span>
+    <span class="marquee-item dot">AI-Native Workflows</span>
+    <!-- duplicate for seamless loop -->
+    <span class="marquee-item dot">Creative Production</span>
+    <span class="marquee-item dot">Project Timelines</span>
+    <span class="marquee-item dot">Vendor &amp; Stakeholder Coordination</span>
+    <span class="marquee-item dot">Brand Strategy</span>
+    <span class="marquee-item dot">Web Design</span>
+    <span class="marquee-item dot">Short-Form Media</span>
+    <span class="marquee-item dot">Motion &amp; Video</span>
+    <span class="marquee-item dot">Art Direction</span>
+    <span class="marquee-item dot">AI-Native Workflows</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ─── Reel ─── -->
+  <section class="sect reveal" id="reel">
+    <div class="sect-h">
+      <span class="num">01</span>
+      <span>Selected Reel</span>
+      <span class="sect-sub">where creativity, strategy, and action meet</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="reel">
+
+      <a class="reel-card feature" href="https://sebastianlewistaylor.github.io/portfolio/arcata-gateway.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/01</span> · 2025 –</span><span>Production / Strategy</span></div>
+        <h3 class="reel-title">City of Arcata —<br><em>Gateway Area Plan</em></h3>
+        <p class="reel-desc">Project Specialist on a 106-acre redevelopment. Produced public-engagement visuals, renders, and pitch decks; coordinated developers, residents, university leadership, and the Wiyot tribe toward a single vision.</p>
+        <div class="reel-tags">
+          <span class="tag">Production</span>
+          <span class="tag">Stakeholders</span>
+          <span class="tag">Renders</span>
+          <span class="tag">Decks</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+      <a class="reel-card feature" href="https://sebastianlewistaylor.github.io/portfolio/humboldt-film-festival.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/02</span> · 2023</span><span>Festival / Production</span></div>
+        <h3 class="reel-title">HIFF 56 —<br><em>Sold Out</em></h3>
+        <p class="reel-desc">Led an 8-person team across media, brand, and print — owned the timeline from brief to delivery on 10+ outputs in five months. Designed the Program Guide and the "Women of the World" poster. The festival sold out.</p>
+        <div class="reel-tags">
+          <span class="tag">Producing</span>
+          <span class="tag">Team Lead</span>
+          <span class="tag">Art Direction</span>
+          <span class="tag">Print</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+      <a class="reel-card wide" href="https://sebastianlewistaylor.github.io/portfolio/digital-lab-cal-poly.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/03</span> · 2022 –</span><span>Brand System</span></div>
+        <h3 class="reel-title">Digital Laboratory — <em>Brand Book</em></h3>
+        <p class="reel-desc">Full nonprofit brand identity for Cal Poly Humboldt's Digital Laboratory — logo system, typographic voice, editorial guidelines, and a brand book that ties it all together. Modern, clean, built to scale.</p>
+        <div class="reel-tags">
+          <span class="tag">Brand System</span>
+          <span class="tag">Editorial</span>
+          <span class="tag">Creative Direction</span>
+          <span class="tag">Web</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+      <a class="reel-card" href="https://sebastianlewistaylor.github.io/portfolio/nico-ballesteros.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/04</span> · 2024 –</span><span>Film / Advisory</span></div>
+        <h3 class="reel-title"><em>NB</em><br>Studios</h3>
+        <p class="reel-desc">Strategic advisor to filmmaker Nico Ballesteros (<em>In Whose Name?</em>) — a cold-DM relationship turned into real collaboration on positioning and rollout.</p>
+        <div class="reel-tags">
+          <span class="tag">Strategy</span>
+          <span class="tag">Film</span>
+          <span class="tag">Advisory</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+      <a class="reel-card" href="https://sebastianlewistaylor.github.io/portfolio/internet-journal.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/05</span> · 2022 –</span><span>Publication</span></div>
+        <h3 class="reel-title"><em>Internet</em><br>Journal</h3>
+        <p class="reel-desc">Editor-in-Chief and producer of an academic publication studying neo-creatives in culture — coordinating contributors, art direction, and product photography. Open-source on Google Scholar.</p>
+        <div class="reel-tags">
+          <span class="tag">Editorial</span>
+          <span class="tag">Producing</span>
+          <span class="tag">Photography</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+      <a class="reel-card wide" href="https://sebastianlewistaylor.github.io/portfolio/machine.html" target="_blank" rel="noopener">
+        <div class="reel-meta"><span><span class="num">R/06</span> · 2025 –</span><span>Web / AI-Native</span></div>
+        <h3 class="reel-title">Portfolio Site — <em>built with Claude Code agents</em></h3>
+        <p class="reel-desc">An original site designed and coded from scratch — image generator, music player, copywriting ticker, and a cursor with real physics. Every aspect built with my own Claude Code agents.</p>
+        <div class="reel-tags">
+          <span class="tag">Web Design</span>
+          <span class="tag">AI Tools</span>
+          <span class="tag">Front-End</span>
+          <span class="tag">Original</span>
+        </div>
+        <span class="reel-bar"></span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ─── Experience ─── -->
+  <section class="sect reveal" id="experience">
+    <div class="sect-h">
+      <span class="num">02</span>
+      <span>Experience</span>
+      <span class="sect-sub">connecting ideas, people, and execution</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="exp">
+
+      <div class="row">
+        <div class="row-num">E/01</div>
+        <div class="row-role">
+          Guest Services Curator
+          <span class="org">Cavallo Point Lodge</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Generated $40,000+ in sales since September while operating well outside the job description — guests routinely name me to management for turning their stay into a five-star experience.</li>
+          <li>Designed guest-facing brochures and built historically accurate props for interpretive programming — concept through finished, on-brand deliverable.</li>
+          <li>Coordinated front-desk, programming, and guest needs in real time — the kind of unblock-everyone-and-ship work a producer lives in.</li>
+        </ul>
+        <div class="row-date">2025 — Pres.<span class="loc">Sausalito, CA</span></div>
+      </div>
+
+      <div class="row">
+        <div class="row-num">E/02</div>
+        <div class="row-role">
+          Project Specialist
+          <span class="org">City of Arcata — Gateway Area Plan</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Walked into City Hall and was hired the same day to move a 106-acre redevelopment plan from vision to implementation.</li>
+          <li>Owned project timelines and produced public-engagement materials — architectural renders, pitch decks, and an RFP for the Gateway marketing campaign.</li>
+          <li>Kept developers, residents, university leadership, and Native communities aligned and informed — the connective tissue across every stakeholder.</li>
+        </ul>
+        <div class="row-date">2025 — Pres.<span class="loc">Arcata, CA</span></div>
+      </div>
+
+      <div class="row">
+        <div class="row-num">E/03</div>
+        <div class="row-role">
+          Creative Director &amp; Producer
+          <span class="org">FAUX™ Studio</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Direct and produce brand, editorial, motion, and web work for artists and nonprofits — managing contributors and vendors from brief through delivery.</li>
+          <li>Cold-DM'd my way into collaborations with Playlab Inc., YY (formerly Alaska Alaska / Virgil Abloh's studio), Benjamin Edgar, Nico Ballesteros, and @Hidden.NY.</li>
+          <li>Curated and produced <em>Conflict of Interest</em>, a solo exhibition on Virgil Abloh — concept, sculpture, print, and environment, end-to-end.</li>
+        </ul>
+        <div class="row-date">2019 — Pres.<span class="loc">Remote / CA</span></div>
+      </div>
+
+      <div class="row">
+        <div class="row-num">E/04</div>
+        <div class="row-role">
+          Graphic Designer
+          <span class="org">Cal Poly Humboldt — Center for Teaching &amp; Learning</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Multi-medium production across motion graphics, video, infographics, decks, and email campaigns supporting institutional rollouts.</li>
+          <li>Led UX strategy on a website rebrand — centered the action funnel and prioritized clearer customer relationships.</li>
+          <li>Held creative output across concurrent campaigns and cross-functional partners — leadership, faculty, and student stakeholders.</li>
+        </ul>
+        <div class="row-date">2022 — 2024<span class="loc">Arcata, CA</span></div>
+      </div>
+
+      <div class="row">
+        <div class="row-num">E/05</div>
+        <div class="row-role">
+          Marketing Manager
+          <span class="org">56th Humboldt International Film Festival</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Led an 8-person team across media production, brand, print, and social — delivered 10+ creative outputs in five months. Festival sold out.</li>
+          <li>Designed the official Program Guide and "Women of the World" poster; set art direction across the season's campaign.</li>
+        </ul>
+        <div class="row-date">Spring 2023<span class="loc">Arcata, CA</span></div>
+      </div>
+
+      <div class="row">
+        <div class="row-num">E/06</div>
+        <div class="row-role">
+          Founder &amp; Director
+          <span class="org">Cal Poly Humboldt — Digital Laboratory</span>
+        </div>
+        <ul class="row-bullets">
+          <li>Founded a digital academic publishing imprint with Cal Poly Humboldt Digital Commons. Designed full nonprofit identity from logo through mission; secured grant funding.</li>
+          <li>Produced <em>Digital Laboratory Show 001 with Benjamin Edgar</em> — creative direction, journalism, audio, video, and animation across the launch.</li>
+        </ul>
+        <div class="row-date">2021 — Pres.<span class="loc">Arcata, CA</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Capabilities ─── -->
+  <section class="sect reveal" id="capabilities">
+    <div class="sect-h">
+      <span class="num">03</span>
+      <span>Capabilities</span>
+      <span class="sect-sub">how I work, in plain language</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="caps-grid">
+      <p class="caps">
+        I make sure the <em>right people make the right assets</em> — on time and on brand. <span class="light">Trained as a fine artist; I read taste, but I live in timelines, briefs, and the messy middle.</span> AI tools are how I do my <em>best work.</em>
+      </p>
+      <div class="caps-side">
+        <span class="head">— Track Record</span>
+        Own timelines brief → delivery<br>
+        Coordinate design, motion &amp; production vendors<br>
+        Keep cross-functional stakeholders unblocked<br>
+        Strong taste in clean, modern tech &amp; brand work<br>
+        Web design &amp; short-form media fluency<br>
+        AI-native — builds with Claude every day<br>
+        Detail-first, finish-first
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Tools ─── -->
+  <section class="sect" id="tools" style="padding-top:60px">
+    <div class="tools-row">
+      <span class="label">— Tooling</span>
+      <div class="tools-list">
+        Claude &amp; Claude Code <span>·</span> Google Workspace <span>·</span> Figma <span>·</span> After Effects <span>·</span> Premiere <span>·</span> Photoshop <span>·</span> Illustrator <span>·</span> InDesign <span>·</span> Keynote <span>·</span> Midjourney
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Education ─── -->
+  <section class="sect" id="education" style="padding-top:24px">
+    <div class="sect-h">
+      <span class="num">04</span>
+      <span>Education</span>
+      <span class="rule"></span>
+    </div>
+    <div class="edu">
+      <div class="edu-line">
+        <em>B.A.</em>, Visual Identity
+        <div class="edu-school">Cal Poly Humboldt</div>
+      </div>
+      <div class="edu-line">
+        <em>Cert.</em>, Museum &amp; Gallery Practices
+        <div class="edu-school">Cal Poly Humboldt</div>
+      </div>
+      <div class="edu-meta">2024 · Arcata, CA</div>
+    </div>
+  </section>
+
+  <!-- ─── End slate ─── -->
+  <footer class="end">
+    <div>End / Sebastian L. Taylor</div>
+    <div class="center">— Made for Crusoe Brand Studio —</div>
+    <div class="right"><a href="mailto:slt4441@gmail.com">slt4441@gmail.com</a></div>
+  </footer>
+
+</div>
+
+<script>
+  // ── Reveal on scroll ─────────────────────────────
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target) }
+    })
+  },{threshold:.12, rootMargin:"0px 0px -40px 0px"});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // ── Custom cursor (desktop only) ──────────────────
+  const cursor = document.getElementById('cursor');
+  const isFine = window.matchMedia('(pointer: fine)').matches;
+  if(isFine){
+    cursor.classList.add('show');
+    let x=0,y=0,tx=0,ty=0;
+    document.addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; });
+    const tick = ()=>{
+      x += (tx - x) * .22;
+      y += (ty - y) * .22;
+      cursor.style.transform = `translate(${x}px, ${y}px) translate(-50%,-50%)`;
+      requestAnimationFrame(tick);
+    };
+    tick();
+    document.querySelectorAll('a, .reel-card, .row, .tag, .music').forEach(el=>{
+      el.addEventListener('mouseenter', ()=>cursor.classList.add('hover'));
+      el.addEventListener('mouseleave', ()=>cursor.classList.remove('hover'));
+    });
+  }
+
+  // ── Soundtrack (hidden YouTube IFrame) ────────────
+  const music = document.getElementById('music');
+  const musicBtn = document.getElementById('musicBtn');
+  let yt, ytReady = false, isPlaying = false;
+
+  // Reveal control once page has settled
+  setTimeout(()=>music.classList.add('ready'), 900);
+
+  // Inject YT API
+  const ytScript = document.createElement('script');
+  ytScript.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(ytScript);
+
+  window.onYouTubeIframeAPIReady = () => {
+    yt = new YT.Player('ytplayer', {
+      height: '1', width: '1',
+      videoId: 'yQvpDIE70wk',
+      playerVars: {
+        list: 'RDyQvpDIE70wk',
+        listType: 'playlist',
+        autoplay: 0,
+        controls: 0,
+        modestbranding: 1,
+        playsinline: 1,
+        rel: 0,
+        iv_load_policy: 3
+      },
+      events: {
+        onReady: () => { ytReady = true; try { yt.setVolume(60); } catch(_){} },
+        onStateChange: (e) => {
+          const s = e.data;
+          if (s === YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            music.classList.add('playing');
+          } else if (s === YT.PlayerState.PAUSED || s === YT.PlayerState.ENDED) {
+            isPlaying = false;
+            music.classList.remove('playing');
+          }
+        }
+      }
+    });
+  };
+
+  const toggle = () => {
+    if (!ytReady) return;
+    if (isPlaying) yt.pauseVideo();
+    else yt.playVideo();
+  };
+  musicBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggle(); });
+  music.addEventListener('click', toggle);
+  music.addEventListener('keydown', (e)=>{
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
+  });
+</script>
+
+</body>
+</html>
