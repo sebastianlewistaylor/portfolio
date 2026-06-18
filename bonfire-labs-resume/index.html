@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sebastian Taylor — Junior Creative Producer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e9e9eb;
+    --card:#ffffff;
+    --ink:#18181b;
+    --ink-2:#3f3f46;
+    --muted:#71717a;
+    --faint:#a1a1aa;
+    --line:#e4e4e7;
+    --line-2:#d4d4d8;
+    --accent:#18181b;
+    --wash:#f4f4f5;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Geist','Helvetica Neue',Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    font-feature-settings:"ss01","kern","liga";
+    padding:40px 20px 80px;
+  }
+  ::selection{background:var(--ink);color:#fff}
+
+  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+
+  /* ─── Sheet ─── */
+  .sheet{
+    max-width:860px;margin:0 auto;
+    background:var(--card);
+    border:1px solid var(--line);
+    box-shadow:0 1px 2px rgba(24,24,27,.04),0 12px 40px -12px rgba(24,24,27,.16);
+    padding:54px 58px 48px;
+  }
+
+  /* ─── Header ─── */
+  .head{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:32px;
+    padding-bottom:22px;
+    border-bottom:2px solid var(--ink);
+  }
+  .name{
+    font-size:38px;font-weight:600;letter-spacing:-.025em;line-height:1;
+    color:var(--ink);
+  }
+  .role{
+    margin-top:10px;
+    font-family:'Geist Mono',monospace;
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);
+  }
+  .role b{color:var(--ink);font-weight:500}
+  .contact{
+    text-align:right;
+    font-size:12.5px;line-height:1.75;color:var(--ink-2);
+    flex-shrink:0;
+  }
+  .contact a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2);transition:color .15s,border-color .15s}
+  .contact a:hover{color:var(--ink);border-color:var(--ink)}
+  .contact .faint{color:var(--faint)}
+
+  /* ─── Summary ─── */
+  .summary{
+    padding:20px 0 26px;
+    font-size:15.5px;line-height:1.5;color:var(--ink-2);
+    max-width:64ch;
+  }
+  .summary b{color:var(--ink);font-weight:500}
+
+  /* ─── Body grid ─── */
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 232px;
+    gap:46px;
+  }
+
+  /* ─── Section label ─── */
+  .label{
+    font-family:'Geist Mono',monospace;
+    font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--faint);
+    padding-bottom:12px;margin-bottom:18px;
+    border-bottom:1px solid var(--line);
+  }
+  section + section{margin-top:30px}
+
+  /* ─── Experience ─── */
+  .job{margin-bottom:20px;break-inside:avoid}
+  .job:last-child{margin-bottom:0}
+  .job-top{
+    display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  }
+  .job-role{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .job-date{
+    font-family:'Geist Mono',monospace;
+    font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);white-space:nowrap;flex-shrink:0;
+  }
+  .job-org{
+    font-size:12.5px;color:var(--muted);font-weight:500;
+    margin-top:1px;
+  }
+  .job-org .loc{color:var(--faint);font-weight:400}
+  .job ul{list-style:none;margin-top:8px}
+  .job li{
+    position:relative;padding-left:15px;margin-bottom:4px;
+    font-size:13px;line-height:1.5;color:var(--ink-2);
+  }
+  .job li::before{
+    content:"";position:absolute;left:0;top:8px;
+    width:5px;height:5px;border-radius:50%;
+    background:var(--line-2);
+  }
+  .job li b{color:var(--ink);font-weight:600}
+
+  /* ─── Selected work ─── */
+  .work a{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    padding:8px 0;border-bottom:1px solid var(--line);
+    text-decoration:none;color:var(--ink);
+    transition:padding-left .2s;
+  }
+  .work a:last-child{border-bottom:none}
+  .work a:hover{padding-left:6px}
+  .work-name{font-size:13.5px;font-weight:500}
+  .work-name span{color:var(--faint);font-weight:400;margin-left:8px;font-size:12px}
+  .work-arrow{font-size:13px;color:var(--faint);transition:color .2s}
+  .work a:hover .work-arrow{color:var(--ink)}
+
+  /* ─── Sidebar ─── */
+  .side-block{margin-bottom:26px}
+  .side-block:last-child{margin-bottom:0}
+  .side-list{font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+  .side-list .item{
+    display:flex;gap:8px;
+    padding:3px 0;
+  }
+  .side-list .item::before{content:"—";color:var(--faint);flex-shrink:0}
+  .tools-wrap{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    font-family:'Geist Mono',monospace;
+    font-size:10px;letter-spacing:.04em;
+    padding:4px 9px;border:1px solid var(--line-2);border-radius:5px;
+    color:var(--ink-2);background:var(--wash);
+  }
+  .chip.key{border-color:var(--ink);color:var(--ink);background:#fff;font-weight:500}
+  .edu-item{margin-bottom:12px}
+  .edu-item:last-child{margin-bottom:0}
+  .edu-deg{font-size:13px;font-weight:600;color:var(--ink)}
+  .edu-sub{font-size:12px;color:var(--muted)}
+  .edu-meta{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-top:1px}
+  .side-links a{
+    display:block;font-size:12.5px;color:var(--ink-2);text-decoration:none;
+    padding:3px 0;border-bottom:1px solid var(--line);
+    transition:color .15s;
+  }
+  .side-links a:last-child{border-bottom:none}
+  .side-links a:hover{color:var(--ink)}
+  .side-links a span{float:right;color:var(--faint)}
+
+  /* ─── Footer ─── */
+  .foot{
+    margin-top:38px;padding-top:18px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;
+    font-family:'Geist Mono',monospace;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  }
+
+  /* ─── Download button ─── */
+  .dl{
+    position:fixed;top:22px;right:22px;z-index:50;
+    display:inline-flex;align-items:center;gap:9px;
+    padding:11px 18px;
+    background:var(--ink);color:#fff;
+    border:none;border-radius:8px;cursor:pointer;
+    font-family:'Geist',sans-serif;
+    font-size:13px;font-weight:500;letter-spacing:.01em;
+    box-shadow:0 4px 16px -4px rgba(24,24,27,.4);
+    transition:transform .18s cubic-bezier(.22,1,.36,1),background .18s;
+  }
+  .dl:hover{transform:translateY(-2px);background:#000}
+  .dl:active{transform:translateY(0)}
+  .dl svg{display:block}
+  .dl-hint{
+    position:fixed;top:62px;right:22px;z-index:50;
+    font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:.1em;
+    color:var(--muted);text-align:right;max-width:200px;
+    opacity:.85;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 760px){
+    body{padding:20px 12px 90px}
+    .sheet{padding:34px 26px 32px}
+    .head{flex-direction:column;gap:16px}
+    .contact{text-align:left}
+    .name{font-size:30px}
+    .grid{grid-template-columns:1fr;gap:34px}
+    .dl{top:auto;bottom:18px;left:50%;right:auto;transform:translateX(-50%)}
+    .dl:hover{transform:translateX(-50%) translateY(-2px)}
+    .dl-hint{display:none}
+  }
+
+  /* ─── Print / PDF ─── */
+  @page{ size:A4; margin:13mm; }
+  @media print{
+    html,body{background:#fff}
+    body{padding:0;font-size:10.2pt}
+    .dl,.dl-hint{display:none!important}
+    .sheet{
+      max-width:none;margin:0;border:none;box-shadow:none;
+      padding:0;
+    }
+    .summary{padding:14px 0 18px;font-size:11pt}
+    .grid{gap:30px;grid-template-columns:1fr 210px}
+    section + section{margin-top:18px}
+    .job{margin-bottom:13px}
+    .label{margin-bottom:12px;padding-bottom:8px}
+    .head{break-after:avoid}
+    a{color:inherit!important;border:none!important}
+    .work a,.side-links a{border-bottom:1px solid var(--line)!important}
+    .side-links a span,.work-arrow{display:none}
+  }
+</style>
+</head>
+<body>
+
+<button class="dl" id="dlBtn" type="button" aria-label="Download as PDF">
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8 1.5v8.5M4.5 7L8 10.5 11.5 7M2.5 13.5h11"/>
+  </svg>
+  Download PDF
+</button>
+<div class="dl-hint">Save as PDF in the print dialog → Destination</div>
+
+<main class="sheet">
+
+  <!-- ─── Header ─── -->
+  <header class="head">
+    <div>
+      <h1 class="name">Sebastian Taylor</h1>
+      <div class="role">Junior Creative Producer · <b>For Bonfire Labs</b></div>
+    </div>
+    <div class="contact">
+      <a href="mailto:slt4441@gmail.com">slt4441@gmail.com</a><br>
+      <a href="tel:+14154836436">+1 415 483 6436</a><br>
+      San Francisco Bay Area, CA<br>
+      <a href="https://sebastianlewistaylor.github.io/portfolio" target="_blank" rel="noopener">sebastianlewistaylor.github.io/portfolio</a>
+    </div>
+  </header>
+
+  <!-- ─── Summary ─── -->
+  <p class="summary">
+    I've become addicted to <b>making shit happen</b> — the connective tissue between creative vision and the designers, animators, and producers who bring it to life. I own timelines brief-to-delivery, keep cross-functional people unblocked, and ship <b>on time and on brand</b>. AI tools are how I do my best work.
+  </p>
+
+  <div class="grid">
+
+    <!-- ─── Main column ─── -->
+    <div class="main">
+
+      <section>
+        <div class="label">Experience</div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Guest Services Curator</div>
+            <div class="job-date">2025 — Present</div>
+          </div>
+          <div class="job-org">Cavallo Point Lodge <span class="loc">· Sausalito, CA</span></div>
+          <ul>
+            <li>Generated <b>$40,000+ in sales</b> since September while operating well beyond the job description — guests routinely name me to management for turning their stay into a five-star experience.</li>
+            <li>Designed guest-facing brochures and built historically accurate props for interpretive programming — concept through finished, on-brand deliverable.</li>
+            <li>Coordinated front-desk, programming, and guest needs in real time — the unblock-everyone-and-ship work a producer lives in.</li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Project Specialist</div>
+            <div class="job-date">2025 — Present</div>
+          </div>
+          <div class="job-org">City of Arcata — Gateway Area Plan <span class="loc">· Arcata, CA</span></div>
+          <ul>
+            <li>Walked into City Hall and was hired the same day to move a <b>106-acre redevelopment</b> from vision to implementation.</li>
+            <li>Owned project timelines and produced public-engagement materials — architectural renders, pitch decks, and an RFP for the Gateway marketing campaign.</li>
+            <li>Kept developers, residents, university leadership, and Native communities aligned and informed — connective tissue across every stakeholder.</li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Creative Director &amp; Producer</div>
+            <div class="job-date">2019 — Present</div>
+          </div>
+          <div class="job-org">FAUX™ Studio <span class="loc">· Remote / CA</span></div>
+          <ul>
+            <li>Direct and produce brand, editorial, motion, and web work for artists and nonprofits — managing contributors and vendors from brief through delivery.</li>
+            <li>Cold-DM'd my way into collaborations with Playlab Inc., YY (formerly Alaska Alaska / Virgil Abloh's studio), Benjamin Edgar, Nico Ballesteros, and @Hidden.NY.</li>
+            <li>Curated and produced <b>Conflict of Interest</b>, a solo exhibition on Virgil Abloh — concept, sculpture, print, and environment, end-to-end.</li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Graphic Designer</div>
+            <div class="job-date">2022 — 2024</div>
+          </div>
+          <div class="job-org">Cal Poly Humboldt — Center for Teaching &amp; Learning <span class="loc">· Arcata, CA</span></div>
+          <ul>
+            <li>Multi-medium production across motion graphics, video, infographics, decks, and email campaigns supporting institutional rollouts.</li>
+            <li>Led UX strategy on a website rebrand; held creative output across concurrent campaigns and cross-functional partners.</li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Marketing Manager</div>
+            <div class="job-date">Spring 2023</div>
+          </div>
+          <div class="job-org">56th &amp; 57th Humboldt International Film Festival <span class="loc">· Arcata, CA</span></div>
+          <ul>
+            <li>Led an 8-person team across media, brand, print, and social — delivered <b>10+ outputs in five months</b>. Both festivals sold out.</li>
+            <li>Designed the official Program Guide and "Women of the World" poster; set art direction across the season's campaign.</li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-top">
+            <div class="job-role">Founder &amp; Director</div>
+            <div class="job-date">2021 — Present</div>
+          </div>
+          <div class="job-org">Cal Poly Humboldt — Digital Laboratory <span class="loc">· Arcata, CA</span></div>
+          <ul>
+            <li>Founded a digital academic publishing imprint with Cal Poly Humboldt Digital Commons; designed full nonprofit identity and secured grant funding.</li>
+            <li>Produced <b>Digital Laboratory Show 001 with Benjamin Edgar</b> — creative direction, journalism, audio, video, and animation.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="work">
+        <div class="label">Selected Work</div>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/arcata-gateway.html" target="_blank" rel="noopener">
+          <span class="work-name">Arcata Gateway Area Plan <span>Production / Strategy</span></span>
+          <span class="work-arrow">↗</span>
+        </a>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/humboldt-film-festival.html" target="_blank" rel="noopener">
+          <span class="work-name">HIFF 56 &amp; 57 — Both Sold Out <span>Festival / Producing</span></span>
+          <span class="work-arrow">↗</span>
+        </a>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/digital-lab-cal-poly.html" target="_blank" rel="noopener">
+          <span class="work-name">Digital Laboratory — Brand Book <span>Brand System</span></span>
+          <span class="work-arrow">↗</span>
+        </a>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/internet-journal.html" target="_blank" rel="noopener">
+          <span class="work-name">Internet Journal <span>Editorial / Producing</span></span>
+          <span class="work-arrow">↗</span>
+        </a>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/machine.html" target="_blank" rel="noopener">
+          <span class="work-name">Portfolio Site — built with Claude Code <span>Web / AI-Native</span></span>
+          <span class="work-arrow">↗</span>
+        </a>
+      </section>
+
+    </div>
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="side">
+
+      <div class="side-block">
+        <div class="label">What I Do</div>
+        <div class="side-list">
+          <div class="item">Own timelines brief → delivery</div>
+          <div class="item">Coordinate design, motion &amp; production vendors</div>
+          <div class="item">Keep stakeholders unblocked</div>
+          <div class="item">Web design &amp; short-form media</div>
+          <div class="item">Strong taste in clean, modern brand work</div>
+          <div class="item">AI-native — builds with Claude daily</div>
+        </div>
+      </div>
+
+      <div class="side-block">
+        <div class="label">Tools</div>
+        <div class="tools-wrap">
+          <span class="chip key">Claude &amp; Claude Code</span>
+          <span class="chip key">Google Workspace</span>
+          <span class="chip">Figma</span>
+          <span class="chip">After Effects</span>
+          <span class="chip">Premiere</span>
+          <span class="chip">Photoshop</span>
+          <span class="chip">Illustrator</span>
+          <span class="chip">InDesign</span>
+          <span class="chip">Keynote</span>
+          <span class="chip">Midjourney</span>
+        </div>
+      </div>
+
+      <div class="side-block">
+        <div class="label">Education</div>
+        <div class="edu-item">
+          <div class="edu-deg">B.A., Visual Identity</div>
+          <div class="edu-sub">Cal Poly Humboldt</div>
+          <div class="edu-meta">2024 · Arcata, CA</div>
+        </div>
+        <div class="edu-item">
+          <div class="edu-deg">Cert., Museum &amp; Gallery Practices</div>
+          <div class="edu-sub">Cal Poly Humboldt</div>
+          <div class="edu-meta">2024 · Arcata, CA</div>
+        </div>
+      </div>
+
+      <div class="side-block side-links">
+        <div class="label">Links</div>
+        <a href="https://sebastianlewistaylor.github.io/portfolio" target="_blank" rel="noopener">Full portfolio <span>↗</span></a>
+        <a href="https://linkedin.com/in/sebastian-taylorrr" target="_blank" rel="noopener">LinkedIn <span>↗</span></a>
+        <a href="https://instagram.com/faux.tm" target="_blank" rel="noopener">Instagram @faux.tm <span>↗</span></a>
+        <a href="https://sebastianlewistaylor.github.io/portfolio/machine.html" target="_blank" rel="noopener">FAUX™ Generator <span>↗</span></a>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <footer class="foot">
+    <span>Sebastian L. Taylor</span>
+    <span>Résumé · 06 / 2026</span>
+  </footer>
+
+</main>
+
+<script>
+  document.getElementById('dlBtn').addEventListener('click', () => window.print());
+</script>
+
+</body>
+</html>
