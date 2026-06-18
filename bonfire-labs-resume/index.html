@@ -1099,8 +1099,7 @@
   /* Soft glow — colour blobs at randomized positions (set per-load by JS).
      No fixed gradient shape or centre: the falloff comes purely from a heavy
      blur, so the colour dissolves organically instead of as a banded ellipse. */
-  #topo-intro::before,
-  #topo-intro::after{
+  #topo-intro::before{
     content:"";
     position:absolute;
     border-radius:50%;
@@ -1116,73 +1115,55 @@
     height: var(--glow-size, 78vmin);
     transform: translate(-50%,-50%);
   }
-  #topo-intro::after{
-    left: var(--glow-x2, 58%);
-    top:  var(--glow-y2, 60%);
-    width: var(--glow-size2, 52vmin);
-    height: var(--glow-size2, 52vmin);
-    transform: translate(-50%,-50%);
-    opacity:.85;
-  }
-  #topo-intro .topo-scene{
-    position:absolute; inset:0;
-    transform-style: preserve-3d;
-    will-change: transform;
-  }
-  #topo-intro .topo-layer{
+  /* ─── Wordmark card — single confident gesture: monogram + name draw in,
+        then the SMIL aperture (#topo-clip) irises open to reveal the site. ─── */
+  #topo-intro .eg-card{
     position:absolute; left:50%; top:50%;
-    width: 70vmin; height: 88vmin;
-    margin-left: -35vmin; margin-top: -44vmin;
-    transform-style: preserve-3d;
-    /* normal (not multiply): on these filtered + 3D-transformed layers, multiply
-       made Chrome composite the rectangular layer bounds as a hard straight edge.
-       normal blend keeps the colour soft; overlaps still build depth via alpha. */
-    mix-blend-mode: normal;
-    will-change: transform;
-    /* Feather the rectangular layer bounds to transparent so the colour recedes
-       as a soft gradient — kills the hard raster/filter-box edge that otherwise
-       shows through mix-blend-mode + 3D as a tacky straight line. */
-    -webkit-mask: radial-gradient(closest-side, #000 30%, rgba(0,0,0,0) 92%);
-            mask: radial-gradient(closest-side, #000 30%, rgba(0,0,0,0) 92%);
+    transform:translate(-50%,-50%);
+    z-index:2;
+    display:flex; flex-direction:column; align-items:center;
+    gap:18px; padding:0 6vw; text-align:center;
+    pointer-events:none;
   }
-  #topo-intro .topo-layer svg{
-    width:100%; height:100%; display:block;
-    overflow: visible;
+  #topo-intro .eg-mark{
+    display:block; width:64px; height:auto;
+    color:var(--dive-1, #5b4a32);
+    opacity:0;
+    animation:eg-mark-in .6s cubic-bezier(.22,1,.36,1) .1s forwards;
   }
-  /* Each layer: own glyph color from random palette + own fly trajectory.
-     Layers cross paths — L1↔L2 (X diagonals), L3↔L6 (vertical), L4↔L5 (counter-diagonals). */
-  #topo-intro .L1 { color: var(--dive-1); animation: flyL1 3.6s cubic-bezier(.40,.00,.30,1) forwards; }
-  #topo-intro .L2 { color: var(--dive-2); animation: flyL2 3.5s cubic-bezier(.50,.05,.25,1) forwards; }
-  #topo-intro .L3 { color: var(--dive-3); animation: flyL3 3.5s cubic-bezier(.40,.00,.40,1) forwards; }
-  #topo-intro .L4 { color: var(--dive-4); animation: flyL4 3.4s cubic-bezier(.55,.05,.20,1) forwards; }
-  #topo-intro .L5 { color: var(--dive-5); animation: flyL5 3.4s cubic-bezier(.50,.00,.25,1) forwards; }
-  #topo-intro .L6 { color: var(--dive-6); animation: flyL6 3.3s cubic-bezier(.60,.05,.20,1) forwards; }
-
-  /* Crossing trajectories — each layer dives its own direction.
-     Z deltas calibrated so closer (less negative start Z) layers pass camera plane earlier. */
-  @keyframes flyL1{ /* top-right → bottom-left, slowest Z (farthest backdrop) */
-    0%   { transform: translate3d(  28%, -22%, -2200px) rotate(  -14deg) scale(0.85); }
-    100% { transform: translate3d( -28%,  22%,  1500px) rotate(   32deg) scale(1.10); }
+  #topo-intro .eg-mark svg{ width:100%; height:auto; display:block; }
+  #topo-intro .eg-name{
+    font-family:var(--brand-font-display, 'Iowan Old Style', Georgia, serif);
+    font-weight:500;
+    font-size:clamp(2.4rem, 7vw, 4.6rem);
+    line-height:.96;
+    color:var(--dive-1, #3a2f20);
+    letter-spacing:.18em;
+    opacity:0;
+    filter:blur(6px);
+    transform:translateY(12px);
+    animation:eg-name-in .9s cubic-bezier(.22,1,.36,1) .35s forwards;
   }
-  @keyframes flyL2{ /* top-left → bottom-right, crosses L1 */
-    0%   { transform: translate3d( -26%, -20%, -1800px) rotate(   18deg) scale(0.92); }
-    100% { transform: translate3d(  26%,  22%,  1800px) rotate(  -36deg) scale(1.20); }
+  #topo-intro .eg-for{
+    font-family:var(--brand-font-mono, 'Futura', ui-monospace, monospace);
+    text-transform:uppercase;
+    font-size:clamp(10px, 1.1vw, 12px);
+    letter-spacing:.34em;
+    color:var(--dive-glow-ink, #7a6647);
+    opacity:0;
+    animation:eg-for-in .6s ease-out .85s forwards;
   }
-  @keyframes flyL3{ /* top → bottom (slight S-curve via rotation) */
-    0%   { transform: translate3d(   2%, -30%, -1400px) rotate(  -10deg) scale(0.95); }
-    100% { transform: translate3d(  -4%,  30%,  2200px) rotate(   44deg) scale(1.30); }
+  @keyframes eg-mark-in{
+    0%   { opacity:0; transform:translateY(8px) scale(.94); }
+    100% { opacity:.9; transform:translateY(0)   scale(1); }
   }
-  @keyframes flyL4{ /* bottom-right → top-left, crosses L1 in middle */
-    0%   { transform: translate3d(  22%,  20%, -1000px) rotate(   24deg) scale(1.00); }
-    100% { transform: translate3d( -30%, -24%,  3000px) rotate(  -52deg) scale(1.50); }
+  @keyframes eg-name-in{
+    0%   { opacity:0; filter:blur(6px); transform:translateY(12px); letter-spacing:.18em; }
+    100% { opacity:1; filter:blur(0);   transform:translateY(0);    letter-spacing:.02em; }
   }
-  @keyframes flyL5{ /* bottom-left → top-right, crosses L2 */
-    0%   { transform: translate3d( -24%,  18%,  -600px) rotate(  -26deg) scale(1.05); }
-    100% { transform: translate3d(  28%, -26%,  4000px) rotate(   48deg) scale(1.65); }
-  }
-  @keyframes flyL6{ /* bottom → top, fastest (closest), counter-spirals */
-    0%   { transform: translate3d(   0%,  28%,  -200px) rotate(   12deg) scale(1.15); }
-    100% { transform: translate3d(   2%, -32%,  5200px) rotate(  -68deg) scale(1.95); }
+  @keyframes eg-for-in{
+    0%   { opacity:0; transform:translateY(4px); }
+    100% { opacity:.85; transform:translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -1191,106 +1172,41 @@
 </style>
 
 <script>
-  /* ─── Earth-tone palette per refresh — hues clamped to the rust→ochre→moss band
-        (14°–105°). Saturation 30–60%, lightness 22–55%. Never produces blues/purples. ─── */
+  /* ─── Earth-tone palette per refresh — hue clamped to the rust→ochre→moss band
+        (14°–105°). Drives the iris background, soft glow, and wordmark ink. ─── */
   (function(){
     var r = document.documentElement;
     var minH = 14, maxH = 105;
     var base = minH + Math.random() * (maxH - minH);
-    function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-    function pick(spread, satLo, satHi, lightLo, lightHi){
-      var h = clamp(base + (Math.random() - 0.5) * spread * 2, minH - 6, maxH + 6);
-      var s = satLo + Math.random() * (satHi - satLo);
-      var l = lightLo + Math.random() * (lightHi - lightLo);
-      return 'hsl(' + h.toFixed(1) + ', ' + s.toFixed(0) + '%, ' + l.toFixed(0) + '%)';
-    }
-    for (var i = 1; i <= 6; i++){
-      r.style.setProperty('--dive-' + i, pick(40, 32, 60, 22, 52));
-    }
-    r.style.setProperty('--dive-bg',   'hsl(' + (32 + Math.random() * 22).toFixed(1) + ', 22%, 92%)');
-    r.style.setProperty('--dive-glow', 'hsla(' + base.toFixed(1) + ', 45%, 42%, 0.18)');
+    r.style.setProperty('--dive-1',        'hsl(' + base.toFixed(1) + ', 42%, 28%)');   // wordmark + monogram ink
+    r.style.setProperty('--dive-glow-ink', 'hsl(' + base.toFixed(1) + ', 30%, 44%)');   // muted subline
+    r.style.setProperty('--dive-bg',       'hsl(' + (32 + Math.random() * 22).toFixed(1) + ', 22%, 92%)');
+    r.style.setProperty('--dive-glow',     'hsla(' + base.toFixed(1) + ', 45%, 42%, 0.18)');
     // Randomized glow placement — the blur does the fading, so position drifts each load.
-    r.style.setProperty('--glow-x',     (38 + Math.random() * 26).toFixed(1) + '%');
-    r.style.setProperty('--glow-y',     (34 + Math.random() * 30).toFixed(1) + '%');
-    r.style.setProperty('--glow-x2',    (40 + Math.random() * 30).toFixed(1) + '%');
-    r.style.setProperty('--glow-y2',    (42 + Math.random() * 34).toFixed(1) + '%');
-    r.style.setProperty('--glow-size',  (64 + Math.random() * 30).toFixed(0) + 'vmin');
-    r.style.setProperty('--glow-size2', (44 + Math.random() * 24).toFixed(0) + 'vmin');
+    r.style.setProperty('--glow-x',    (38 + Math.random() * 26).toFixed(1) + '%');
+    r.style.setProperty('--glow-y',    (34 + Math.random() * 30).toFixed(1) + '%');
+    r.style.setProperty('--glow-size', (64 + Math.random() * 30).toFixed(0) + 'vmin');
   })();
 </script>
 
 </head>
 <body>
 
-<!-- ─── Fluid metaball dive — physics-generated water-in-oil shapes per refresh ─── -->
+<!-- ─── Refined iris entry — wordmark draws in, then the aperture opens to the site ─── -->
 <div id="topo-intro" aria-hidden="true">
-  <div class="topo-scene">
-    <div class="topo-layer L1"></div>
-    <div class="topo-layer L2"></div>
-    <div class="topo-layer L3"></div>
-    <div class="topo-layer L4"></div>
-    <div class="topo-layer L5"></div>
-    <div class="topo-layer L6"></div>
+  <div class="eg-card">
+    <span class="eg-mark">
+      <svg viewBox="0 0 96 64" aria-hidden="true">
+        <g fill="currentColor">
+          <path d="M11 9.4c5.2-1.7 11.6-1.6 16.6.4 1.4.6 2.7 1.4 3.6 2.4l-3.6 4.6c-1.6-1.4-3.4-2.3-5.4-2.7-2.4-.5-4.8-.3-6.6.4-1.5.6-2.4 1.5-2.4 2.7 0 1.6 2 2.5 5.6 3.3 6 1.4 9.7 2.6 11.6 4.6 1.6 1.7 2.4 4 2.4 6.7 0 4-1.7 7.2-5.2 9.5-3.4 2.3-7.7 3.4-12.6 3.4-3.4 0-6.5-.5-9.4-1.6L7.6 38c2.5 1 4.7 1.5 7 1.6 4.4 0 7.5-1.5 7.5-4.4 0-1.6-1.6-2.5-5.5-3.5-6.4-1.6-10-3-11.8-5.2-1.4-1.6-2-3.7-2-6.4 0-3.6 1.5-6.4 4.5-8.4Z"/>
+          <path d="M58 14.6h-9.6V9.4h26v5.2h-9.6v33.4H58z"/>
+        </g>
+      </svg>
+    </span>
+    <span class="eg-name">Sebastian Taylor</span>
+    <span class="eg-for">for Bonfire&nbsp;Labs</span>
   </div>
 </div>
-<script>
-  /* ─── Metaball generator — each layer gets 5–8 circles with randomized base positions,
-        radii, oscillation ranges, and prime-ish periods. SMIL animates cx/cy/r continuously,
-        the gooey filter merges them into a single fluid silhouette that morphs like a
-        water droplet drifting through oil — asymmetric, never repeating, organic. ─── */
-  (function(){
-    function r(min, max){ return min + Math.random() * (max - min); }
-    function ri(min, max){ return Math.floor(r(min, max + 1)); }
-    function vlist(base, range, asymmetry){
-      // 5-keyframe oscillation; asymmetry (-1..1) biases toward one side for organic feel
-      var a = range * (1 + asymmetry * 0.4);
-      var b = range * (1 - asymmetry * 0.4);
-      return [base, base + a, base - b, base + a * 0.45, base]
-        .map(function(n){ return n.toFixed(1); }).join(';');
-    }
-    function fluidSVG(){
-      var n = ri(5, 8);
-      var circles = [];
-      for (var i = 0; i < n; i++){
-        // Spawn kept central with margin to the viewBox edges so the feathered
-        // silhouette fades to zero before any filter/layer boundary.
-        var x  = r(150, 250);
-        var y  = r(185, 315);
-        var R  = r(30, 56);
-        var dx = r(14, 34);
-        var dy = r(14, 34);
-        var dR = r(12, 24);
-        var ax = r(-0.6, 0.6);
-        var ay = r(-0.6, 0.6);
-        var aR = r(-0.4, 0.4);
-        // Prime-ish periods so motions desync — never identical configuration twice
-        var px = r(6.5, 13).toFixed(2);
-        var py = r(6.5, 13).toFixed(2);
-        var pR = r(5.5, 11).toFixed(2);
-        circles.push(
-          '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + R.toFixed(1) + '">' +
-            '<animate attributeName="cx" dur="' + px + 's" repeatCount="indefinite" calcMode="spline" ' +
-              'keyTimes="0;0.25;0.5;0.75;1" keySplines=".4 0 .6 1;.4 0 .6 1;.4 0 .6 1;.4 0 .6 1" ' +
-              'values="' + vlist(x, dx, ax) + '"/>' +
-            '<animate attributeName="cy" dur="' + py + 's" repeatCount="indefinite" calcMode="spline" ' +
-              'keyTimes="0;0.25;0.5;0.75;1" keySplines=".4 0 .6 1;.4 0 .6 1;.4 0 .6 1;.4 0 .6 1" ' +
-              'values="' + vlist(y, dy, ay) + '"/>' +
-            '<animate attributeName="r"  dur="' + pR + 's" repeatCount="indefinite" calcMode="spline" ' +
-              'keyTimes="0;0.25;0.5;0.75;1" keySplines=".4 0 .6 1;.4 0 .6 1;.4 0 .6 1;.4 0 .6 1" ' +
-              'values="' + vlist(R, dR, aR) + '"/>' +
-          '</circle>'
-        );
-      }
-      return '<svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid meet" overflow="visible">' +
-             '<g filter="url(#gooey)" fill="currentColor">' + circles.join('') + '</g></svg>';
-    }
-    var layers = document.querySelectorAll('#topo-intro .topo-layer');
-    for (var i = 0; i < layers.length; i++){
-      layers[i].innerHTML = fluidSVG();
-    }
-  })();
-</script>
-
 <main id="site">
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -1377,14 +1293,13 @@
       <path d="M 1.42 0.5 C 1.42 0.744 1.287 0.957 1.122 1.122 C 0.957 1.287 0.752 1.45 0.5 1.45 C 0.248 1.45 0.033 1.305 -0.136 1.136 C -0.305 0.967 -0.43 0.746 -0.43 0.5 C -0.43 0.254 -0.278 0.048 -0.115 -0.115 C 0.048 -0.278 0.251 -0.44 0.5 -0.44 C 0.749 -0.44 0.962 -0.296 1.129 -0.129 C 1.296 0.038 1.42 0.256 1.42 0.5 Z">
         <animate
           attributeName="d"
-          dur="3.4s"
-          begin="0s"
+          dur="1.15s"
+          begin="0.95s"
           fill="freeze"
           calcMode="spline"
-          keyTimes="0; 0.35; 0.72; 1"
-          keySplines="0 0 1 1; .55 .02 .2 1; .45 0 .15 1"
+          keyTimes="0; 0.55; 1"
+          keySplines=".55 .02 .2 1; .45 0 .15 1"
           values="
-            M 1.42 0.5 C 1.42 0.744 1.287 0.957 1.122 1.122 C 0.957 1.287 0.752 1.45 0.5 1.45 C 0.248 1.45 0.033 1.305 -0.136 1.136 C -0.305 0.967 -0.43 0.746 -0.43 0.5 C -0.43 0.254 -0.278 0.048 -0.115 -0.115 C 0.048 -0.278 0.251 -0.44 0.5 -0.44 C 0.749 -0.44 0.962 -0.296 1.129 -0.129 C 1.296 0.038 1.42 0.256 1.42 0.5 Z;
             M 1.42 0.5 C 1.42 0.744 1.287 0.957 1.122 1.122 C 0.957 1.287 0.752 1.45 0.5 1.45 C 0.248 1.45 0.033 1.305 -0.136 1.136 C -0.305 0.967 -0.43 0.746 -0.43 0.5 C -0.43 0.254 -0.278 0.048 -0.115 -0.115 C 0.048 -0.278 0.251 -0.44 0.5 -0.44 C 0.749 -0.44 0.962 -0.296 1.129 -0.129 C 1.296 0.038 1.42 0.256 1.42 0.5 Z;
             M 0.88 0.5 C 0.88 0.601 0.786 0.666 0.726 0.726 C 0.666 0.786 0.611 0.92 0.5 0.92 C 0.389 0.92 0.354 0.75 0.302 0.698 C 0.25 0.646 0.1 0.606 0.1 0.5 C 0.1 0.394 0.205 0.329 0.267 0.267 C 0.329 0.205 0.383 0.06 0.5 0.06 C 0.617 0.06 0.656 0.232 0.712 0.288 C 0.768 0.344 0.88 0.399 0.88 0.5 Z;
             M 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 C 0.5 0.5 0.5 0.5 0.5 0.5 Z
@@ -2279,9 +2194,9 @@
     if (!heroLoopActive) { heroLoopActive = true; requestAnimationFrame(heroDriftLoop); }
   };
 
-  // Trigger hero entrance while the topographic clip-path is collapsing toward center.
+  // Trigger hero entrance as the iris aperture starts opening (begin 0.95s).
   const _prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  setTimeout(runHeroEntrance, _prefersReduced ? 0 : 2850);
+  setTimeout(runHeroEntrance, _prefersReduced ? 0 : 1100);
 </script>
 
 </main>
